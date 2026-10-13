@@ -1,0 +1,37 @@
+project_id = "agmkgxmjktbfzpzpkqez"
+
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.billing-agent]
+    verify_jwt = false
+  [functions.client-support]
+    verify_jwt = false
+  [functions.create-checkout-session]
+    verify_jwt = false
+  [functions.create-portal-session]
+    verify_jwt = false
+  [functions.document-agent]
+    verify_jwt = false
+  [functions.follow-up-agent]
+    verify_jwt = false
+  [functions.handle-email-suppression]
+    verify_jwt = false
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false
+  [functions.lawyer-ai]
+    verify_jwt = false
+  [functions.legal-intake]
+    verify_jwt = false
+  [functions.match-lawyers]
+    verify_jwt = false
+  [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.send-transactional-email]
+    verify_jwt = true
+  [functions.stripe-webhook]
+    verify_jwt = false
+  [functions.verify-email-otp]
+    verify_jwt = false

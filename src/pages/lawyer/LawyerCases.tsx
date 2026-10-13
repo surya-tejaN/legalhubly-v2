@@ -1,0 +1,76 @@
+import { useState, useEffect } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import { lawyerNavItems } from "@/lib/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { SectionHeader, StatusBadge } from "@/components/DashboardComponents";
+import { Badge } from "@/components/ui/badge";
+import { Briefcase, Loader2, Calendar, User } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface Matter {
+  id: string; title: string; case_number: string; status: string; priority: string;
+  legal_category: string | null; client_name: string; next_deadline: string | null; created_at: string;
+}
+
+const statusVariant = (s: string) => {
+  if (s === "active") return "success" as const;
+  if (s === "closed") return "default" as const;
+  return "warning" as const;
+};
+
+export default function LawyerCases() {
+  const { profile } = useAuth();
+  const [matters, setMatters] = useState<Matter[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("matters").select("*").order("created_at", { ascending: false });
+      setMatters(data || []);
+      setLoading(false);
+    })();
+  }, []);
+
+  return (
+    <DashboardLayout sidebarItems={lawyerNavItems} portalLabel="Lawyer Portal" userName={profile?.full_name || "Lawyer"} userRole="Lawyer">
+      <SectionHeader title="Cases" subtitle="Manage your active matters" />
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>
+      ) : matters.length === 0 ? (
+        <div className="text-center py-20 rounded-xl bg-card border">
+          <Briefcase className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="font-serif text-lg text-foreground mb-2">No cases yet</h3>
+          <p className="text-sm text-muted-foreground">Your cases will appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {matters.map((m, i) => (
+            <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+              className="p-5 rounded-xl border bg-card hover:shadow-sm transition-shadow">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-foreground">{m.title}</h3>
+                    <StatusBadge status={m.status} variant={statusVariant(m.status)} />
+                    <Badge variant="outline" className="text-[10px]">{m.priority}</Badge>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5">
+                    <span>{m.case_number}</span>
+                    <span className="flex items-center gap-1"><User className="h-3 w-3" />{m.client_name}</span>
+                    {m.legal_category && <span>{m.legal_category}</span>}
+                  </div>
+                </div>
+                {m.next_deadline && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                    <Calendar className="h-3.5 w-3.5" />{new Date(m.next_deadline).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </DashboardLayout>
+  );
+}

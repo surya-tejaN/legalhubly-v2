@@ -1,37 +1,41 @@
 # Legalhubly v2
 
-Clean rewrite of Legalhubly — **same UI**, **no Lovable**, production-ready foundation.
+Clean rewrite of Legalhubly — **same UI + advanced features**, **zero Lovable**.
 
-## Stack
-
-- React + TypeScript + Vite
-- Tailwind CSS + shadcn-style UI
-- Supabase (connect later via `.env`)
-- TanStack Query + React Router
-
-## Phase 1 (this repo now)
-
-- Landing page
-- Auth (login / signup with OTP UI / forgot / reset)
-- Find Lawyers + lawyer profile
-
-## Getting started
+## Live locally
 
 ```bash
-cp .env.example .env
-# Fill Supabase values when ready
-
+cp .env.example .env   # or use your Supabase keys
 npm install
 npm run dev
 ```
 
-## Connect Supabase later
+Open http://127.0.0.1:5173
 
-1. Create/use your Supabase project  
-2. Put URL + anon key in `.env`  
-3. Apply migrations from the previous project (or recreate schema)  
-4. Deploy Edge Functions (`verify-email-otp`, email sender)
+## What’s included
 
-## Old repo
+### Public
+- Landing, About, Contact, Privacy, Terms
+- Find Lawyers + lawyer profiles
 
-`legal-aid-smart` / `legalhubly` on GitHub stays as reference. This is the clean path forward.
+### Auth
+- Login / Signup with **6-digit OTP**
+- Forgot / reset password
+
+### Client portal
+- Dashboard, Saved lawyers, Messages, Cases, Consultations, Documents, Payments, Profile, Settings
+
+### Lawyer portal
+- Dashboard, Leads, Clients, Messages, Cases, Calendar, Billing, Documents, Tools, Settings
+
+### Backend (in repo)
+- Supabase migrations
+- Edge Functions (OTP, email, Stripe, AI agents, matching)
+
+## Stack
+
+React + TypeScript + Vite · Tailwind · shadcn/ui · Supabase · TanStack Query
+
+## GitHub
+
+https://github.com/surya-tejaN/legalhubly-v2
