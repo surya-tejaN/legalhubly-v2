@@ -5,6 +5,9 @@ import {
 import type { TemplateEntry } from './registry.ts'
 
 const SITE_NAME = "Legalhubly"
+const APP_URL =
+  (typeof Deno !== "undefined" && Deno.env.get("APP_URL")?.trim()) ||
+  "http://127.0.0.1:5173"
 
 interface BookingConfirmationProps {
   clientName?: string
@@ -13,6 +16,7 @@ interface BookingConfirmationProps {
   date?: string
   time?: string
   duration?: string
+  appUrl?: string
 }
 
 const BookingConfirmationEmail = ({
@@ -22,6 +26,7 @@ const BookingConfirmationEmail = ({
   date,
   time,
   duration,
+  appUrl = APP_URL,
 }: BookingConfirmationProps) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -59,7 +64,7 @@ const BookingConfirmationEmail = ({
         </Section>
 
         <Section style={{ textAlign: 'center' as const, margin: '30px 0' }}>
-          <Button style={button} href="https://legalhubly.com/client/consultations">
+          <Button style={button} href={`${appUrl}/client/consultations`}>
             View My Consultations
           </Button>
         </Section>

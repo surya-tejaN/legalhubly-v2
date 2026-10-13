@@ -1,4 +1,4 @@
-project_id = "agmkgxmjktbfzpzpkqez"
+project_id = "ubljuduaxtdojaaggqpw"
 
 [functions]
   [functions.auth-email-hook]
@@ -6,7 +6,7 @@ project_id = "agmkgxmjktbfzpzpkqez"
   [functions.billing-agent]
     verify_jwt = false
   [functions.client-support]
-    verify_jwt = false
+    verify_jwt = true
   [functions.create-checkout-session]
     verify_jwt = false
   [functions.create-portal-session]
@@ -35,3 +35,9 @@ project_id = "agmkgxmjktbfzpzpkqez"
     verify_jwt = false
   [functions.verify-email-otp]
     verify_jwt = false
+
+
+[auth]
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = ["http://127.0.0.1:5173/**", "http://localhost:5173/**", "http://127.0.0.1:5173", "http://localhost:5173"]
+enable_signup = true

@@ -29,3 +29,6 @@ supabase/.branches/
 
 .env
 .env.local
+.supabase-db-password
+.env.old*
+.old-supabase-env.bak

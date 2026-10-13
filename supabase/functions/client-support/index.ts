@@ -1,53 +1,71 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { getAiChatEnv } from "../_shared/ai_chat.ts";
+import { SUPPORT_SYSTEM_PROMPT } from "../_shared/support_guidelines.ts";
+import { corsHeadersFor, isOriginAllowed } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const SYSTEM_PROMPT = `You are the Client Support Agent for Legalhubly, an AI-powered legal services platform. You help clients understand how the platform works, answer questions about the legal process, and guide them through their journey.
-
-## What You Can Help With
-- How the intake process works
-- Understanding case statuses and timelines
-- Explaining what to expect during a consultation
-- How lawyer matching works
-- Payment and billing questions
-- Document upload and sharing process
-- General legal process education (what happens in a lawsuit, mediation, etc.)
-
-## CRITICAL Compliance Rules
-- You provide **legal information**, NOT **legal advice**
-- Always include this distinction when answering legal questions:
-  "ℹ️ This is general legal information for educational purposes. For advice specific to your situation, please consult with your matched attorney."
-- Never recommend specific legal strategies for a client's case
-- Never predict case outcomes
-- Never interpret specific laws for the user's situation
-- You CAN explain general legal concepts, timelines, and processes
-
-## Tone
-- Warm, reassuring, and patient
-- Use simple language — avoid jargon
-- Be empathetic — many clients are going through stressful situations
-- Keep answers concise (3-5 sentences unless more detail is requested)
-
-## Platform Knowledge
-- Intake: Clients describe their issue via AI chat, which classifies the matter and generates a summary
-- Matching: AI recommends lawyers based on practice area, location, availability, fees, and reviews
-- Consultations: Can be video, phone, or in-person. Typically 30 minutes.
-- Documents: Clients can upload and share documents securely with their lawyer
-- Payments: Consultation fees are shown upfront. Some lawyers offer contingency or free consultations.
-- Timeline: After intake, lawyer matching is instant. Consultations can be booked within days.`;
+const MAX_MESSAGES = 24;
+const MAX_CONTENT_CHARS = 4000;
 
 serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (!isOriginAllowed(req)) {
+    return new Response(JSON.stringify({ error: "Origin not allowed" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
-    const { messages } = await req.json();
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Sign in to use support chat." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") ?? "",
+      { global: { headers: { Authorization: authHeader } } },
+    );
+
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      return new Response(JSON.stringify({ error: "Invalid or expired session." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    const rawMessages = Array.isArray(body?.messages) ? body.messages : [];
+    const messages = rawMessages
+      .slice(-MAX_MESSAGES)
+      .filter((m: { role?: string; content?: string }) =>
+        m &&
+        (m.role === "user" || m.role === "assistant") &&
+        typeof m.content === "string" &&
+        m.content.trim().length > 0
+      )
+      .map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content.slice(0, MAX_CONTENT_CHARS),
+      }));
+
+    if (messages.length === 0) {
+      return new Response(JSON.stringify({ error: "Send at least one message." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { apiKey: AI_API_KEY, url: AI_CHAT_URL, model: AI_MODEL } = getAiChatEnv();
 
     const response = await fetch(AI_CHAT_URL, {
@@ -59,10 +77,11 @@ serve(async (req) => {
       body: JSON.stringify({
         model: AI_MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...(messages || []),
+          { role: "system", content: SUPPORT_SYSTEM_PROMPT },
+          ...messages,
         ],
         stream: true,
+        temperature: 0.4,
       }),
     });
 
@@ -71,12 +90,14 @@ serve(async (req) => {
       console.error("AI gateway error:", response.status, t);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI usage limit reached." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI gateway error: ${response.status}`);
@@ -87,9 +108,15 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("client-support error:", e);
+    const message = e instanceof Error ? e.message : "Unknown error";
+    const status = message.includes("AI_API_KEY") ? 503 : 500;
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: status === 503
+          ? "Support chat is not configured yet. Please use Contact."
+          : message,
+      }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

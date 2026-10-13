@@ -40,18 +40,15 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
   reauthentication: ReauthenticationEmail,
 }
 
-// Configuration
-const SITE_NAME = "legalhubly"
-const SENDER_DOMAIN = "notify.legalhubly.com"
-const ROOT_DOMAIN = "legalhubly.com"
-const FROM_DOMAIN = "legalhubly.com" // Domain shown in From address (may be root or sender subdomain)
+// Configuration — set via Supabase secrets (no production domain baked in).
+const SITE_NAME = Deno.env.get("SITE_NAME")?.trim() || "Legalhubly"
+const SENDER_DOMAIN = Deno.env.get("EMAIL_SENDER_DOMAIN")?.trim() || ""
+const ROOT_DOMAIN = Deno.env.get("EMAIL_FROM_DOMAIN")?.trim() || SENDER_DOMAIN
+const FROM_DOMAIN = ROOT_DOMAIN
 
 // Sample data for preview mode ONLY (not used in actual email sending).
-// URLs are baked in at scaffold time from the project's real data.
-// The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
-// can always find-and-replace it with the actual recipient when sending test emails,
-// even if the project's domain has changed since the template was scaffolded.
-const SAMPLE_PROJECT_URL = "https://legalhubly.com"
+const SAMPLE_PROJECT_URL =
+  Deno.env.get("APP_URL")?.trim() || "http://127.0.0.1:5173"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: {

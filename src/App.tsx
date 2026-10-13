@@ -10,6 +10,7 @@ import PageLoader from "@/components/PageLoader";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import SupportChat from "@/components/SupportChat";
 import { queryClient } from "@/lib/queryClient";
 import { features } from "@/config/features";
 
@@ -249,6 +250,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <AnimatedRoutes />
+            {features.supportChat && <SupportChat />}
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

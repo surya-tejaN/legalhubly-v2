@@ -25,6 +25,9 @@ export const features = {
   lawyerCalendar: true,
   lawyerBilling: true,
   lawyerDocuments: true,
+
+  /** Floating guidelines-trained support chatbot */
+  supportChat: true,
 } as const;
 
 export type FeatureFlag = keyof typeof features;
