@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MessageCircle, X, Send, Loader2, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import {
+  MessageCircle, X, Send, Loader2, Mic, MicOff, Volume2, VolumeX,
+  ImagePlus, Trash2, Hand,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { streamSupportReply, type ChatMessage } from "@/lib/supportChat";
+import { fileToChatDataUrl } from "@/lib/chatImage";
 import {
   getSpeechRecognitionCtor,
   isSpeechRecognitionSupported,
   isSpeechSynthesisSupported,
+  normalizeTranscript,
   speakText,
   stopSpeaking,
   type SpeechRecognitionLike,
@@ -16,7 +21,7 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "Hi — I’m Legalhubly Support for Chicago lawyers. I can guide you through the app, explain general legal processes, and help you prepare for a consultation. I can’t give legal advice. Tap the mic to speak, or type below.";
+  "Hi — I’m Legalhubly Support for Chicago lawyers. I can guide you through the app, explain general legal processes, and help you prepare for a consultation. Use the mic for hands-free voice, attach a screenshot from your gallery, or type below. I can’t give legal advice.";
 
 export default function SupportChat() {
   const { user } = useAuth();
@@ -25,14 +30,24 @@ export default function SupportChat() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [listening, setListening] = useState(false);
+  const [hearing, setHearing] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [interim, setInterim] = useState("");
+  const [handsFree, setHandsFree] = useState(true);
   const [voiceOut, setVoiceOut] = useState(true);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: WELCOME },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const voiceOutRef = useRef(voiceOut);
+  const handsFreeRef = useRef(handsFree);
+  const busyRef = useRef(busy);
+  const pendingImageRef = useRef<string | null>(null);
+  const sendRef = useRef<(override?: string, image?: string | null) => Promise<void>>(async () => {});
 
   const voiceEnabled = isFeatureEnabled("supportChatVoice");
   const canListen = voiceEnabled && isSpeechRecognitionSupported();
@@ -41,10 +56,19 @@ export default function SupportChat() {
   useEffect(() => {
     voiceOutRef.current = voiceOut;
   }, [voiceOut]);
+  useEffect(() => {
+    handsFreeRef.current = handsFree;
+  }, [handsFree]);
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
+  useEffect(() => {
+    pendingImageRef.current = pendingImage;
+  }, [pendingImage]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open]);
+  }, [messages, open, interim, pendingImage]);
 
   useEffect(() => {
     return () => {
@@ -58,17 +82,23 @@ export default function SupportChat() {
     if (!open) {
       recognitionRef.current?.abort();
       setListening(false);
+      setHearing(false);
+      setInterim("");
       stopSpeaking();
+      setSpeaking(false);
     }
   }, [open]);
 
   const stopListening = () => {
     recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setListening(false);
+    setHearing(false);
+    setInterim("");
   };
 
   const startListening = () => {
-    if (!user || busy || listening) return;
+    if (!user || busyRef.current || listening) return;
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) {
       setError("Voice input isn’t supported in this browser. Try Chrome or Edge.");
@@ -77,23 +107,51 @@ export default function SupportChat() {
 
     setError("");
     stopSpeaking();
+    setSpeaking(false);
 
     const recognition = new Ctor();
-    recognition.continuous = false;
+    recognition.continuous = handsFreeRef.current;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
 
+    let finalChunk = "";
+
+    recognition.onspeechstart = () => setHearing(true);
+    recognition.onspeechend = () => setHearing(false);
+
     recognition.onresult = (ev) => {
-      let transcript = "";
-      for (let i = 0; i < ev.results.length; i++) {
-        transcript += ev.results[i][0].transcript;
+      let interimText = "";
+      let finals = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const piece = ev.results[i][0]?.transcript || "";
+        if (ev.results[i].isFinal) finals += piece;
+        else interimText += piece;
       }
-      setInput(transcript.trim());
+      if (finals) {
+        finalChunk = normalizeTranscript(`${finalChunk} ${finals}`.trim());
+        setInput(finalChunk);
+        setInterim("");
+      } else {
+        setInterim(normalizeTranscript(interimText));
+      }
+
+      // Hands-free: auto-send when a final phrase arrives
+      if (finals && handsFreeRef.current && !busyRef.current) {
+        const toSend = normalizeTranscript(`${finalChunk}`.trim());
+        if (toSend.length >= 2) {
+          recognition.stop();
+          void sendRef.current(toSend, pendingImageRef.current);
+          finalChunk = "";
+        }
+      }
     };
 
     recognition.onerror = (ev) => {
       setListening(false);
+      setHearing(false);
+      setInterim("");
       if (ev.error === "not-allowed") {
         setError("Microphone permission denied. Allow mic access to use voice.");
       } else if (ev.error !== "aborted" && ev.error !== "no-speech") {
@@ -103,6 +161,9 @@ export default function SupportChat() {
 
     recognition.onend = () => {
       setListening(false);
+      setHearing(false);
+      setInterim("");
+      // Non–hands-free: leave transcript in the box for user to send
     };
 
     try {
@@ -114,9 +175,10 @@ export default function SupportChat() {
     }
   };
 
-  const send = async (overrideText?: string) => {
+  const send = async (overrideText?: string, imageOverride?: string | null) => {
     const text = (overrideText ?? input).trim();
-    if (!text || busy) return;
+    const imageUrl = imageOverride !== undefined ? imageOverride : pendingImage;
+    if ((!text && !imageUrl) || busy) return;
 
     if (!user) {
       setError("Sign in to chat with support.");
@@ -126,7 +188,15 @@ export default function SupportChat() {
     stopListening();
     setError("");
     setInput("");
-    const next: ChatMessage[] = [...messages, { role: "user", content: text }];
+    setPendingImage(null);
+    setInterim("");
+
+    const userMsg: ChatMessage = {
+      role: "user",
+      content: text || (imageUrl ? "Please look at this photo." : ""),
+      ...(imageUrl ? { imageUrl } : {}),
+    };
+    const next: ChatMessage[] = [...messages, userMsg];
     setMessages([...next, { role: "assistant", content: "" }]);
     setBusy(true);
 
@@ -138,7 +208,7 @@ export default function SupportChat() {
 
     try {
       await streamSupportReply(
-        next.filter((m) => m.content.length > 0),
+        next.filter((m) => m.content.length > 0 || Boolean(m.imageUrl)),
         (delta) => {
           fullReply += delta;
           setMessages((prev) => {
@@ -154,7 +224,11 @@ export default function SupportChat() {
       );
 
       if (voiceOutRef.current && canSpeak && fullReply.trim()) {
-        speakText(fullReply);
+        setSpeaking(true);
+        speakText(fullReply, {
+          onEnd: () => setSpeaking(false),
+          onStart: () => setSpeaking(true),
+        });
       }
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
@@ -173,28 +247,67 @@ export default function SupportChat() {
     }
   };
 
+  sendRef.current = send;
+
+  const onPickImage = async (file: File | undefined) => {
+    if (!file || !user) return;
+    try {
+      setError("");
+      const dataUrl = await fileToChatDataUrl(file);
+      setPendingImage(dataUrl);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load photo.");
+    }
+  };
+
+  const displayInput = listening && interim ? `${input}${input ? " " : ""}${interim}` : input;
+
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-3">
       {open && (
-        <div className="w-[min(100vw-2rem,380px)] h-[min(70vh,520px)] rounded-2xl border border-border bg-background shadow-elevated flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="w-[min(100vw-2rem,400px)] h-[min(72vh,560px)] rounded-2xl border border-border bg-background shadow-elevated flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
             <div>
               <p className="text-sm font-semibold text-foreground">Support</p>
               <p className="text-[11px] text-muted-foreground">
-                Guided answers · voice on · not legal advice
+                Voice · photos · not legal advice
               </p>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              {canListen && (
+                <button
+                  type="button"
+                  onClick={() => setHandsFree((v) => !v)}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    handsFree
+                      ? "text-accent bg-accent/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  )}
+                  aria-label={handsFree ? "Hands-free on" : "Tap-to-talk mode"}
+                  title={handsFree ? "Hands-free (auto-send)" : "Tap mic, then Send"}
+                >
+                  <Hand className="h-4 w-4" />
+                </button>
+              )}
               {canSpeak && (
                 <button
                   type="button"
                   onClick={() => {
                     setVoiceOut((v) => {
-                      if (v) stopSpeaking();
+                      if (v) {
+                        stopSpeaking();
+                        setSpeaking(false);
+                      }
                       return !v;
                     });
                   }}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    voiceOut
+                      ? "text-accent bg-accent/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  )}
                   aria-label={voiceOut ? "Mute spoken replies" : "Enable spoken replies"}
                   title={voiceOut ? "Mute replies" : "Speak replies"}
                 >
@@ -223,11 +336,38 @@ export default function SupportChat() {
                     : "mr-auto bg-muted text-foreground",
                 )}
               >
-                {m.content || (busy ? "…" : "")}
+                {m.imageUrl && (
+                  <img
+                    src={m.imageUrl}
+                    alt="Attached"
+                    className="mb-2 max-h-40 rounded-lg border border-black/10 object-cover w-full"
+                  />
+                )}
+                {m.content || (busy && i === messages.length - 1 ? "…" : "")}
               </div>
             ))}
-            {listening && (
-              <p className="text-[11px] text-muted-foreground px-1 animate-pulse">Listening…</p>
+
+            {(listening || speaking) && (
+              <div className="flex items-center gap-2 px-1">
+                <div className="flex items-end gap-0.5 h-4">
+                  {[0, 1, 2, 3, 4].map((bar) => (
+                    <span
+                      key={bar}
+                      className={cn(
+                        "w-1 rounded-full bg-accent transition-all",
+                        listening || speaking ? "animate-pulse" : "opacity-40",
+                      )}
+                      style={{
+                        height: hearing || speaking ? `${8 + ((bar * 3 + 2) % 10)}px` : "4px",
+                        animationDelay: `${bar * 80}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {speaking ? "Speaking reply…" : hearing ? "Hearing you…" : "Listening…"}
+                </p>
+              </div>
             )}
             <div ref={bottomRef} />
           </div>
@@ -243,27 +383,76 @@ export default function SupportChat() {
             </div>
           )}
 
+          {pendingImage && (
+            <div className="px-3 pb-2">
+              <div className="relative inline-block">
+                <img
+                  src={pendingImage}
+                  alt="Ready to send"
+                  className="h-16 w-16 rounded-lg object-cover border border-border"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPendingImage(null)}
+                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                  aria-label="Remove photo"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <form
-            className="flex items-end gap-2 border-t border-border p-3"
+            className="flex items-end gap-1.5 border-t border-border p-3"
             onSubmit={(e) => {
               e.preventDefault();
               void send();
             }}
           >
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                void onPickImage(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="shrink-0 h-10 w-10"
+              disabled={!user || busy}
+              aria-label="Upload gallery photo"
+              title="Upload photo from gallery"
+              onClick={() => fileRef.current?.click()}
+            >
+              <ImagePlus className="h-4 w-4" />
+            </Button>
             <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
+              value={displayInput}
+              onChange={(e) => {
+                if (!listening) setInput(e.target.value);
+              }}
               placeholder={
                 user
                   ? listening
-                    ? "Listening…"
-                    : "Ask about the platform… or use the mic"
+                    ? handsFree
+                      ? "Speak — I’ll send when you pause…"
+                      : "Listening…"
+                    : "Ask, speak, or add a photo…"
                   : "Sign in to chat…"
               }
               disabled={!user || busy}
               rows={1}
               maxLength={2000}
-              className="flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60"
+              className={cn(
+                "flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60",
+                listening && "ring-2 ring-accent/30 border-accent/40",
+              )}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -276,10 +465,13 @@ export default function SupportChat() {
                 type="button"
                 size="icon"
                 variant={listening ? "destructive" : "outline"}
-                className="shrink-0 h-10 w-10"
+                className={cn(
+                  "shrink-0 h-10 w-10 relative",
+                  listening && hearing && "animate-pulse",
+                )}
                 disabled={!user || busy}
                 aria-label={listening ? "Stop listening" : "Speak your question"}
-                title={listening ? "Stop" : "Voice input"}
+                title={listening ? "Stop" : handsFree ? "Hands-free voice" : "Voice input"}
                 onClick={() => {
                   if (listening) stopListening();
                   else startListening();
@@ -288,7 +480,12 @@ export default function SupportChat() {
                 {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
             )}
-            <Button type="submit" size="icon" className="shrink-0 h-10 w-10" disabled={!user || busy || !input.trim()}>
+            <Button
+              type="submit"
+              size="icon"
+              className="shrink-0 h-10 w-10"
+              disabled={!user || busy || (!input.trim() && !pendingImage)}
+            >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </form>

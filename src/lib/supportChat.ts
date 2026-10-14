@@ -1,7 +1,12 @@
 import { env } from "@/config/env";
 import { supabase } from "@/integrations/supabase/client";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  /** Optional gallery/screenshot attachment (data URL or https URL). */
+  imageUrl?: string;
+};
 
 /**
  * Stream a reply from the guidelines-trained client-support edge function.
@@ -17,6 +22,12 @@ export async function streamSupportReply(
     throw new Error("Sign in to use support chat.");
   }
 
+  const payload = messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+    ...(m.imageUrl ? { imageUrl: m.imageUrl } : {}),
+  }));
+
   const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/client-support`, {
     method: "POST",
     headers: {
@@ -24,15 +35,15 @@ export async function streamSupportReply(
       Authorization: `Bearer ${accessToken}`,
       apikey: env.VITE_SUPABASE_PUBLISHABLE_KEY,
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages: payload }),
     signal,
   });
 
   if (!res.ok) {
     let message = "Support chat unavailable.";
     try {
-      const payload = await res.json();
-      if (payload?.error) message = payload.error;
+      const errBody = await res.json();
+      if (errBody?.error) message = errBody.error;
     } catch {
       // ignore
     }

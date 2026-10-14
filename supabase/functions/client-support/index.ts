@@ -6,6 +6,55 @@ import { corsHeadersFor, isOriginAllowed } from "../_shared/cors.ts";
 
 const MAX_MESSAGES = 24;
 const MAX_CONTENT_CHARS = 4000;
+const MAX_IMAGE_CHARS = 1_400_000;
+
+type IncomingMsg = {
+  role?: string;
+  content?: string;
+  imageUrl?: string;
+};
+
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+function isSafeImageUrl(url: string): boolean {
+  if (url.startsWith("data:image/")) {
+    return url.length <= MAX_IMAGE_CHARS && /^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(url);
+  }
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && url.length < 2048;
+  } catch {
+    return false;
+  }
+}
+
+function toOpenAiMessage(m: IncomingMsg): { role: string; content: string | ContentPart[] } | null {
+  if (!m || (m.role !== "user" && m.role !== "assistant")) return null;
+  const text = typeof m.content === "string" ? m.content.trim().slice(0, MAX_CONTENT_CHARS) : "";
+  const imageUrl = typeof m.imageUrl === "string" ? m.imageUrl.trim() : "";
+
+  if (m.role === "assistant") {
+    if (!text) return null;
+    return { role: "assistant", content: text };
+  }
+
+  // User: optional image + text (vision)
+  if (imageUrl && isSafeImageUrl(imageUrl)) {
+    const parts: ContentPart[] = [];
+    parts.push({
+      type: "text",
+      text: text ||
+        "The user attached a photo from their gallery. Describe what you see only as it relates to using Legalhubly (UI screenshots, errors). Do not give legal advice from documents. If it looks like an ID, bank statement, or confidential legal filing, refuse and ask them not to share sensitive documents in chat.",
+    });
+    parts.push({ type: "image_url", image_url: { url: imageUrl } });
+    return { role: "user", content: parts };
+  }
+
+  if (!text) return null;
+  return { role: "user", content: text };
+}
 
 serve(async (req) => {
   const corsHeaders = corsHeadersFor(req);
@@ -45,22 +94,14 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const rawMessages = Array.isArray(body?.messages) ? body.messages : [];
+    const rawMessages = Array.isArray(body?.messages) ? body.messages as IncomingMsg[] : [];
     const messages = rawMessages
       .slice(-MAX_MESSAGES)
-      .filter((m: { role?: string; content?: string }) =>
-        m &&
-        (m.role === "user" || m.role === "assistant") &&
-        typeof m.content === "string" &&
-        m.content.trim().length > 0
-      )
-      .map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content.slice(0, MAX_CONTENT_CHARS),
-      }));
+      .map(toOpenAiMessage)
+      .filter((m): m is { role: string; content: string | ContentPart[] } => m !== null);
 
     if (messages.length === 0) {
-      return new Response(JSON.stringify({ error: "Send at least one message." }), {
+      return new Response(JSON.stringify({ error: "Send at least one message or photo." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
