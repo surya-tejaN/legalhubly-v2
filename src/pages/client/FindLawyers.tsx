@@ -155,13 +155,28 @@ function LawyerCard({
             </div>
           </div>
 
-          {/* CTAs */}
+          {/* CTAs — website first, book below */}
           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
             <Button
               type="button"
               variant="gold"
               size="default"
               className="gap-2 w-full sm:w-auto"
+              onClick={() =>
+                openLawyerWebsite({
+                  websiteUrl: lawyer.website_url,
+                  name: lawyer.name,
+                  firm: lawyer.firm,
+                })
+              }
+            >
+              {isDirectSite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs w-full sm:w-auto"
               disabled={!bookable}
               title={
                 bookable
@@ -176,21 +191,6 @@ function LawyerCard({
                   ? "Book later"
                   : "Book consult"
                 : "Unavailable"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 text-xs w-full sm:w-auto"
-              onClick={() =>
-                openLawyerWebsite({
-                  websiteUrl: lawyer.website_url,
-                  name: lawyer.name,
-                  firm: lawyer.firm,
-                })
-              }
-            >
-              {isDirectSite ? "Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>

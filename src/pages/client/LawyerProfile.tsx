@@ -187,15 +187,6 @@ export default function LawyerProfile() {
                   variant="gold"
                   size="lg"
                   className="gap-2"
-                  onClick={() => setBookOpen(true)}
-                >
-                  <Calendar className="h-4 w-4" /> Book Consultation
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="gap-2 border-white/40 text-white hover:bg-white/15 hover:text-white"
                   onClick={() =>
                     openLawyerWebsite({
                       websiteUrl: lawyer.website_url,
@@ -205,6 +196,15 @@ export default function LawyerProfile() {
                   }
                 >
                   <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 border-white/40 text-white hover:bg-white/15 hover:text-white"
+                  onClick={() => setBookOpen(true)}
+                >
+                  <Calendar className="h-4 w-4" /> Book Consultation
                 </Button>
                 <Button variant="outline" size="lg" className="gap-2 border-white/40 text-white hover:bg-white/15 hover:text-white" asChild>
                   <Link to="/client/messages">Message</Link>
@@ -310,14 +310,6 @@ export default function LawyerProfile() {
                 type="button"
                 variant="gold"
                 className="w-full mb-2 gap-2"
-                onClick={() => setBookOpen(true)}
-              >
-                <Calendar className="h-4 w-4" /> Book Consultation
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full mb-2 gap-2"
                 onClick={() =>
                   openLawyerWebsite({
                     websiteUrl: lawyer.website_url,
@@ -327,6 +319,14 @@ export default function LawyerProfile() {
                 }
               >
                 <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mb-2 gap-2"
+                onClick={() => setBookOpen(true)}
+              >
+                <Calendar className="h-4 w-4" /> Book Consultation
               </Button>
               <Button variant="ghost" className="w-full gap-2" onClick={handleSave}>
                 <Heart className={cn("h-4 w-4", saved && "fill-accent text-accent")} />
