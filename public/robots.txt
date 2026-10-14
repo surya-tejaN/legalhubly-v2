@@ -1,14 +1,27 @@
+# Legalhubly — https://www.legalhubly.com
+User-agent: *
+Allow: /
+
+# Keep private app areas out of search indexes
+Disallow: /client/dashboard
+Disallow: /client/messages
+Disallow: /client/cases
+Disallow: /client/consultations
+Disallow: /client/documents
+Disallow: /client/payments
+Disallow: /client/settings
+Disallow: /client/profile
+Disallow: /lawyer/
+Disallow: /firm/
+Disallow: /admin/
+Disallow: /reset-password
+Disallow: /verify-email-success
+
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: *
-Allow: /
+Sitemap: https://www.legalhubly.com/sitemap.xml
+Sitemap: https://legalhubly.com/sitemap.xml

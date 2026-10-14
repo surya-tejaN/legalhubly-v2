@@ -261,11 +261,11 @@ export default function Index() {
               AI-Powered Legal Matching
             </div>
             <h1 className="text-[2.5rem] md:text-[3.75rem] font-serif leading-[1.08] tracking-tight text-foreground mb-5">
-              Find the right lawyer —{" "}
+              Legalh<span className="text-accent">u</span>bly — find the right lawyer{" "}
               <span className="text-gradient-gold">faster</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed mb-10">
-              Describe your situation and discover lawyers that fit your needs
+              Chicago’s AI legal marketplace. Describe your issue, get matched, connect with verified lawyers — free to start.
             </p>
           </motion.div>
 
