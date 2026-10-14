@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, MapPin, Shield, ArrowUpDown,
   Briefcase, Scale, ArrowLeft,
-  Building2, Award, Search, Info, Heart, Sparkles, ExternalLink, Zap,
+  Building2, Award, Search, Info, Heart, Sparkles, ExternalLink, Zap, Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
+import BookConsultationDialog, { type BookableLawyer } from "@/components/BookConsultationDialog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ interface Lawyer {
   short_description: string | null;
   website_url: string | null;
   hourly_rate: number | null;
+  consultation_fee: number | null;
+  next_available_date: string | null;
 }
 
 type SortKey = "rating" | "review_count" | "experience";
@@ -47,13 +50,26 @@ const SORT_OPTIONS: { value: SortKey; label: string; icon: typeof Star }[] = [
 
 // ─── Lawyer Card ─────────────────────────────────────────────────────────────
 
-function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer; index: number; savedIds: Set<string>; onToggleSave: (id: string) => void }) {
+function LawyerCard({
+  lawyer,
+  index,
+  savedIds,
+  onToggleSave,
+  onBook,
+}: {
+  lawyer: Lawyer;
+  index: number;
+  savedIds: Set<string>;
+  onToggleSave: (id: string) => void;
+  onBook: (lawyer: Lawyer) => void;
+}) {
   const isSaved = savedIds.has(lawyer.id);
   const { isDirectSite } = resolveLawyerWebsiteHref({
     websiteUrl: lawyer.website_url,
     name: lawyer.name,
     firm: lawyer.firm,
   });
+  const bookable = lawyer.availability_status !== "unavailable";
 
   return (
     <motion.div
@@ -140,12 +156,32 @@ function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer;
           </div>
 
           {/* CTAs */}
-          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 shrink-0">
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
             <Button
               type="button"
               variant="gold"
               size="default"
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
+              disabled={!bookable}
+              title={
+                bookable
+                  ? "Book a consultation"
+                  : "Not available to book right now — check back later"
+              }
+              onClick={() => onBook(lawyer)}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              {bookable
+                ? lawyer.availability_status === "busy"
+                  ? "Book later"
+                  : "Book consult"
+                : "Unavailable"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs w-full sm:w-auto"
               onClick={() =>
                 openLawyerWebsite({
                   websiteUrl: lawyer.website_url,
@@ -154,9 +190,9 @@ function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer;
                 })
               }
             >
-              {isDirectSite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
+              {isDirectSite ? "Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="outline" size="sm" asChild className="text-xs">
+            <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>
             </Button>
           </div>
@@ -177,6 +213,7 @@ export default function FindLawyers() {
   const [sortBy, setSortBy] = useState<SortKey>("rating");
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [searchInput, setSearchInput] = useState("");
+  const [bookLawyer, setBookLawyer] = useState<BookableLawyer | null>(null);
 
   const urlQuery = searchParams.get("q") || "";
   const urlMatched = searchParams.get("matched") || "";
@@ -285,6 +322,13 @@ export default function FindLawyers() {
 
   return (
     <div className="min-h-screen bg-background">
+      <BookConsultationDialog
+        lawyer={bookLawyer}
+        open={Boolean(bookLawyer)}
+        onOpenChange={(open) => {
+          if (!open) setBookLawyer(null);
+        }}
+      />
       {/* Header */}
       <header className="sticky top-0 z-40 glass-nav border-b border-border/50">
         <div className="container flex items-center gap-3 h-16">
@@ -374,7 +418,24 @@ export default function FindLawyers() {
             ))
           ) : sorted.length > 0 ? (
             sorted.map((lawyer, i) => (
-              <LawyerCard key={lawyer.id} lawyer={lawyer} index={i} savedIds={savedIds} onToggleSave={toggleSave} />
+              <LawyerCard
+                key={lawyer.id}
+                lawyer={lawyer}
+                index={i}
+                savedIds={savedIds}
+                onToggleSave={toggleSave}
+                onBook={(l) =>
+                  setBookLawyer({
+                    id: l.id,
+                    name: l.name,
+                    firm: l.firm,
+                    availability_status: l.availability_status,
+                    consultation_fee: l.consultation_fee,
+                    next_available_date: l.next_available_date,
+                    avg_response_hours: l.avg_response_hours,
+                  })
+                }
+              />
             ))
           ) : (
             <div className="text-center py-16">

@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, MapPin, Shield, ArrowLeft, Globe, Briefcase,
   Heart, Award, Scale, Languages, ExternalLink,
-  CheckCircle2, Timer, Loader2, Building2, Clock,
+  CheckCircle2, Timer, Loader2, Building2, Clock, Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
+import BookConsultationDialog, { availabilityLabel } from "@/components/BookConsultationDialog";
 
 interface Lawyer {
   id: string;
@@ -37,6 +38,8 @@ interface Lawyer {
   website_url: string | null;
   short_description: string | null;
   hourly_rate: number | null;
+  consultation_fee: number | null;
+  next_available_date: string | null;
 }
 
 const fadeUp = {
@@ -61,6 +64,7 @@ export default function LawyerProfile() {
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
 
   useEffect(() => {
     if (!lawyerId) return;
@@ -130,9 +134,15 @@ export default function LawyerProfile() {
     name: lawyer.name,
     firm: lawyer.firm,
   });
+  const avail = availabilityLabel(lawyer.availability_status, lawyer.next_available_date);
 
   return (
     <div className="min-h-screen bg-background">
+      <BookConsultationDialog
+        lawyer={lawyer}
+        open={bookOpen}
+        onOpenChange={setBookOpen}
+      />
       {/* Navigation */}
       <nav className="sticky top-0 z-50 glass-nav border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -177,6 +187,15 @@ export default function LawyerProfile() {
                   variant="gold"
                   size="lg"
                   className="gap-2"
+                  onClick={() => setBookOpen(true)}
+                >
+                  <Calendar className="h-4 w-4" /> Book Consultation
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 border-white/40 text-white hover:bg-white/15 hover:text-white"
                   onClick={() =>
                     openLawyerWebsite({
                       websiteUrl: lawyer.website_url,
@@ -277,10 +296,28 @@ export default function LawyerProfile() {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="rounded-2xl border bg-card p-6 shadow-card sticky top-24">
+              <div
+                className={cn(
+                  "mb-4 rounded-xl border px-3 py-2 text-xs",
+                  avail.tone === "ok" && "border-success/30 bg-success/5 text-foreground",
+                  avail.tone === "warn" && "border-warning/30 bg-warning/5 text-foreground",
+                  avail.tone === "muted" && "border-border bg-muted/40 text-muted-foreground",
+                )}
+              >
+                {avail.text}
+              </div>
               <Button
                 type="button"
                 variant="gold"
-                className="w-full mb-4 gap-2"
+                className="w-full mb-2 gap-2"
+                onClick={() => setBookOpen(true)}
+              >
+                <Calendar className="h-4 w-4" /> Book Consultation
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mb-2 gap-2"
                 onClick={() =>
                   openLawyerWebsite({
                     websiteUrl: lawyer.website_url,
@@ -297,6 +334,12 @@ export default function LawyerProfile() {
               </Button>
 
               <div className="mt-5 pt-5 border-t space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Consult fee</span>
+                  <span className="font-medium text-foreground">
+                    {lawyer.consultation_fee ? `$${Number(lawyer.consultation_fee)}` : "Free intro"}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Response Time</span>
                   <span className="font-medium text-foreground flex items-center gap-1">
