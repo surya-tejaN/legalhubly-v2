@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Scale, Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft } from "lucide-react";
+import Logo from "@/components/Logo";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -31,8 +32,7 @@ export default function ForgotPassword() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <Scale className="h-8 w-8 text-accent" />
-            <span className="font-serif text-2xl font-bold text-foreground">Legalhubly</span>
+            <Logo withWordmark wordmarkClassName="text-2xl font-bold" />
           </Link>
           <h1 className="font-serif text-3xl font-bold text-foreground">Reset password</h1>
           <p className="mt-2 text-muted-foreground">

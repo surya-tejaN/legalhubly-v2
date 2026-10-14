@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Scale, Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck, Sparkles } from "lucide-react";
+import Logo from "@/components/Logo";
 
 export default function Login() {
   const { user, profile, loading } = useAuth();
@@ -115,11 +116,8 @@ export default function Login() {
           backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
         }} />
 
-        <Link to="/" className="relative z-10 inline-flex items-center gap-2.5">
-          <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center">
-            <Scale className="h-5 w-5 text-accent" />
-          </div>
-          <span className="font-serif text-2xl tracking-tight">Legalhubly</span>
+        <Link to="/" className="relative z-10 inline-flex">
+          <Logo withWordmark onDark wordmarkClassName="text-2xl tracking-tight" />
         </Link>
 
         <div className="relative z-10 space-y-6 max-w-md">
@@ -150,9 +148,8 @@ export default function Login() {
       <div className="flex items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-md space-y-7">
           <div className="text-center lg:text-left">
-            <Link to="/" className="inline-flex lg:hidden items-center gap-2 mb-6">
-              <Scale className="h-7 w-7 text-accent" />
-              <span className="font-serif text-xl font-bold text-foreground">Legalhubly</span>
+            <Link to="/" className="inline-flex lg:hidden mb-6">
+              <Logo withWordmark wordmarkClassName="text-xl font-bold" />
             </Link>
             <h1 className="font-serif text-3xl font-bold text-foreground tracking-tight">Welcome back</h1>
             <p className="mt-2 text-sm text-muted-foreground">

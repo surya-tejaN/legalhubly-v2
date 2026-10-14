@@ -6,8 +6,9 @@ import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { matchPracticeAreas } from "@/lib/practiceAreas";
 import { LAUNCH_CITY_LABEL } from "@/lib/location";
+import Logo from "@/components/Logo";
 import {
-  Scale, Shield, ArrowRight, Sparkles, MapPin, Briefcase,
+  Shield, ArrowRight, Sparkles, MapPin, Briefcase,
   Menu, X, Star, Clock, BadgeCheck, Search,
   Users, Home, Gavel, Globe, Heart, Building2,
   Landmark, ScrollText, ChevronRight, DollarSign, Brain,
@@ -148,11 +149,8 @@ export default function Index() {
       {/* ═══ NAVIGATION ═══ */}
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "glass-nav border-b border-border/50 shadow-card" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-[72px]">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="h-9 w-9 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/15 transition-colors">
-              <Scale className="h-5 w-5 text-accent" />
-            </div>
-            <span className="font-serif text-xl tracking-tight text-foreground">Legalhubly</span>
+          <Link to="/" className="group">
+            <Logo withWordmark wordmarkClassName="group-hover:opacity-90 transition-opacity" />
           </Link>
 
           <div className="hidden lg:flex items-center gap-1">
@@ -463,9 +461,8 @@ export default function Index() {
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
-              <Link to="/" className="flex items-center gap-2 mb-4">
-                <Scale className="h-5 w-5 text-accent" />
-                <span className="font-serif text-lg text-foreground">Legalhubly</span>
+              <Link to="/" className="inline-flex mb-4">
+                <Logo withWordmark wordmarkClassName="text-lg" />
               </Link>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-[200px]">
                 AI-powered legal marketplace connecting clients with verified attorneys.

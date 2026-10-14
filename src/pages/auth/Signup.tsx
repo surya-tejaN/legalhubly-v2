@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { Scale, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import Logo from "@/components/Logo";
 import PasswordStrengthMeter, { validatePassword } from "@/components/PasswordStrengthMeter";
 import CitySelect from "@/components/CitySelect";
 import { LAUNCH_CITY } from "@/lib/location";
@@ -255,8 +256,7 @@ export default function Signup() {
       <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
         <div className="w-full max-w-md space-y-6 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-2">
-            <Scale className="h-8 w-8 text-accent" />
-            <span className="font-serif text-2xl font-bold text-foreground">Legalhubly</span>
+            <Logo withWordmark wordmarkClassName="text-2xl font-bold" />
           </Link>
 
           <div className="mx-auto h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center">
@@ -340,8 +340,7 @@ export default function Signup() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <Scale className="h-8 w-8 text-accent" />
-            <span className="font-serif text-2xl font-bold text-foreground">Legalhubly</span>
+            <Logo withWordmark wordmarkClassName="text-2xl font-bold" />
           </Link>
           <h1 className="font-serif text-3xl font-bold text-foreground">Create your account</h1>
           <p className="mt-2 text-muted-foreground">Sign up with email — verify with a 6-digit code</p>

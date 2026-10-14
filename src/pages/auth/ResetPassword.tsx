@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Scale, Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
+import Logo from "@/components/Logo";
 import PasswordStrengthMeter, { validatePassword } from "@/components/PasswordStrengthMeter";
 
 export default function ResetPassword() {
@@ -64,7 +65,7 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center space-y-4">
-          <Scale className="h-8 w-8 text-accent mx-auto" />
+          <Logo className="mx-auto justify-center" />
           <p className="text-muted-foreground">Invalid or expired reset link.</p>
           <Link to="/forgot-password" className="text-accent hover:underline text-sm">
             Request a new one
@@ -79,8 +80,7 @@ export default function ResetPassword() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <Scale className="h-8 w-8 text-accent" />
-            <span className="font-serif text-2xl font-bold text-foreground">Legalhubly</span>
+            <Logo withWordmark wordmarkClassName="text-2xl font-bold" />
           </Link>
           <h1 className="font-serif text-3xl font-bold text-foreground">Set new password</h1>
           <p className="mt-2 text-muted-foreground">Choose a strong password for your account</p>

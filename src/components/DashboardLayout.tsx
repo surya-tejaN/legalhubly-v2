@@ -1,8 +1,9 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Scale, ChevronLeft, ChevronRight, Search, Menu, X, User, Sun, Moon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Menu, X, User, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/Logo";
 
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -36,9 +37,7 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
     <>
       {/* Brand */}
       <div className={cn("h-[72px] flex items-center gap-3 border-b border-sidebar-border shrink-0", collapsed ? "px-3 justify-center" : "px-5")}>
-        <div className="h-9 w-9 rounded-xl bg-accent/15 flex items-center justify-center shrink-0">
-          <Scale className="h-5 w-5 text-accent" />
-        </div>
+        <LogoMark className="h-9 w-9" onDark />
         {!collapsed && (
           <div className="min-w-0">
             <span className="font-serif text-[17px] text-sidebar-accent-foreground tracking-tight block leading-tight">Legalhubly</span>

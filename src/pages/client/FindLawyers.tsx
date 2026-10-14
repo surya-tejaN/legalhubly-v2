@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Star, MapPin, Shield, ArrowUpDown,
-  Briefcase, Scale, ArrowLeft,
+  Briefcase, ArrowLeft,
   Building2, Award, Search, Info, Heart, Sparkles, ExternalLink, Zap, Calendar,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
 import BookConsultationDialog, { type BookableLawyer } from "@/components/BookConsultationDialog";
+import Logo from "@/components/Logo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -335,9 +336,11 @@ export default function FindLawyers() {
           <Button variant="ghost" size="icon" asChild className="shrink-0">
             <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
-          <Link to="/" className="flex items-center gap-2">
-            <Scale className="h-5 w-5 text-accent" />
-            <span className="font-serif text-base text-foreground hidden sm:inline">Legalhubly</span>
+          <Link to="/" className="hidden sm:inline-flex">
+            <Logo withWordmark wordmarkClassName="text-base" />
+          </Link>
+          <Link to="/" className="sm:hidden inline-flex" aria-label="Legalhubly home">
+            <Logo />
           </Link>
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
