@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { openLawyerWebsite } from "@/lib/lawyerWebsite";
+import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,7 +49,11 @@ const SORT_OPTIONS: { value: SortKey; label: string; icon: typeof Star }[] = [
 
 function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer; index: number; savedIds: Set<string>; onToggleSave: (id: string) => void }) {
   const isSaved = savedIds.has(lawyer.id);
-  const hasWebsite = Boolean(lawyer.website_url?.trim());
+  const { isDirectSite } = resolveLawyerWebsiteHref({
+    websiteUrl: lawyer.website_url,
+    name: lawyer.name,
+    firm: lawyer.firm,
+  });
 
   return (
     <motion.div
@@ -150,7 +154,7 @@ function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer;
                 })
               }
             >
-              {hasWebsite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
+              {isDirectSite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
             </Button>
             <Button variant="outline" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>

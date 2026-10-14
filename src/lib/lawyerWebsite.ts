@@ -8,31 +8,44 @@ export function normalizeExternalUrl(raw: string | null | undefined): string | n
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    // Prior migration stored Google searches as website_url — never treat those as firm sites
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    if (host === "google.com" || host.endsWith(".google.com")) return null;
+    if (host === "bing.com" || host === "duckduckgo.com") return null;
     return parsed.toString();
   } catch {
     return null;
   }
 }
 
-/** Google search fallback when a lawyer site is missing or is a demo placeholder. */
+/** Google search fallback when a lawyer site is missing. */
 export function lawyerSearchUrl(name: string, firm?: string | null): string {
-  const q = [name, firm, "attorney lawyer"].filter(Boolean).join(" ");
+  const q = [name, firm, "Chicago attorney", "site:.com"].filter(Boolean).join(" ");
   return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
 }
 
+export function resolveLawyerWebsiteHref(opts: {
+  websiteUrl?: string | null;
+  name: string;
+  firm?: string | null;
+}): { href: string; isDirectSite: boolean } {
+  const direct = normalizeExternalUrl(opts.websiteUrl);
+  if (direct) return { href: direct, isDirectSite: true };
+  return { href: lawyerSearchUrl(opts.name, opts.firm), isDirectSite: false };
+}
+
 /**
- * Open lawyer website in a new tab. Falls back to Google search so the CTA always works.
+ * Open lawyer website in a new tab.
+ * Prefers the stored firm site; only falls back to search if missing/invalid.
  */
 export function openLawyerWebsite(opts: {
   websiteUrl?: string | null;
   name: string;
   firm?: string | null;
 }): void {
-  const direct = normalizeExternalUrl(opts.websiteUrl);
-  const href = direct || lawyerSearchUrl(opts.name, opts.firm);
+  const { href } = resolveLawyerWebsiteHref(opts);
   const win = window.open(href, "_blank", "noopener,noreferrer");
   if (!win) {
-    // Popup blocked — navigate same tab as last resort
     window.location.assign(href);
   }
 }
