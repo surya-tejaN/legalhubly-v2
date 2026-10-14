@@ -269,9 +269,6 @@ export default function SupportChat() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
             <div>
               <p className="text-sm font-semibold text-foreground">Support</p>
-              <p className="text-[11px] text-muted-foreground">
-                Voice · photos · not legal advice
-              </p>
             </div>
             <div className="flex items-center gap-0.5">
               {canListen && (
