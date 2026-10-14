@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { openLawyerWebsite } from "@/lib/lawyerWebsite";
+import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
 
 interface Lawyer {
   id: string;
@@ -125,6 +125,11 @@ export default function LawyerProfile() {
 
   const location = [lawyer.city, lawyer.state].filter(Boolean).join(", ");
   const responseLabel = lawyer.avg_response_hours < 1 ? "< 1 hour" : lawyer.avg_response_hours < 24 ? `${Math.round(lawyer.avg_response_hours)} hours` : `${Math.round(lawyer.avg_response_hours / 24)} days`;
+  const { isDirectSite } = resolveLawyerWebsiteHref({
+    websiteUrl: lawyer.website_url,
+    name: lawyer.name,
+    firm: lawyer.firm,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,7 +185,7 @@ export default function LawyerProfile() {
                     })
                   }
                 >
-                  <ExternalLink className="h-4 w-4" /> {lawyer.website_url?.trim() ? "Visit Website" : "Find Online"}
+                  <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
                 </Button>
                 <Button variant="outline" size="lg" className="gap-2 border-white/40 text-white hover:bg-white/15 hover:text-white" asChild>
                   <Link to="/client/messages">Message</Link>
@@ -284,7 +289,7 @@ export default function LawyerProfile() {
                   })
                 }
               >
-                <ExternalLink className="h-4 w-4" /> {lawyer.website_url?.trim() ? "Visit Website" : "Find Online"}
+                <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
               </Button>
               <Button variant="ghost" className="w-full gap-2" onClick={handleSave}>
                 <Heart className={cn("h-4 w-4", saved && "fill-accent text-accent")} />
