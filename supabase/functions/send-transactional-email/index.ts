@@ -2,10 +2,12 @@ import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { sendTransactionalEmail } from '../_shared/transactional_email.ts'
 
 // Email sender config — set via Supabase secrets (no production domain baked in).
 const SITE_NAME = Deno.env.get("SITE_NAME")?.trim() || "Legalhubly"
-const SENDER_DOMAIN = Deno.env.get("EMAIL_SENDER_DOMAIN")?.trim() || ""
+// resend.dev works for testing before you verify legalhubly.com
+const SENDER_DOMAIN = Deno.env.get("EMAIL_SENDER_DOMAIN")?.trim() || "resend.dev"
 const FROM_DOMAIN = Deno.env.get("EMAIL_FROM_DOMAIN")?.trim() || SENDER_DOMAIN
 
 const corsHeaders = {
@@ -290,10 +292,14 @@ Deno.serve(async (req) => {
       ? template.subject(templateData)
       : template.subject
 
-  // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
-  // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
+  // 5. Send immediately via Resend (re_ keys), otherwise enqueue for the dispatcher.
+  // Unverified testing must use onboarding@resend.dev (Resend requirement).
+  const fromAddress =
+    FROM_DOMAIN === 'resend.dev'
+      ? `${SITE_NAME} <onboarding@resend.dev>`
+      : `${SITE_NAME} <noreply@${FROM_DOMAIN}>`
+  const emailApiKey = Deno.env.get('EMAIL_SERVICE_SECRET')?.trim() || ''
 
-  // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: templateName,
@@ -301,12 +307,71 @@ Deno.serve(async (req) => {
     status: 'pending',
   })
 
+  if (emailApiKey.startsWith('re_')) {
+    try {
+      await sendTransactionalEmail(
+        {
+          to: effectiveRecipient,
+          from: fromAddress,
+          subject: resolvedSubject,
+          html,
+          text: plainText,
+          message_id: messageId,
+          label: templateName,
+        },
+        { apiKey: emailApiKey },
+      )
+
+      await supabase.from('email_send_log').insert({
+        message_id: messageId,
+        template_name: templateName,
+        recipient_email: effectiveRecipient,
+        status: 'sent',
+      })
+
+      console.log('Transactional email sent via Resend', { templateName, effectiveRecipient })
+      return new Response(
+        JSON.stringify({ success: true, sent: true }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    } catch (sendError) {
+      const errorMessage = sendError instanceof Error ? sendError.message : String(sendError)
+      console.error('Resend send failed', { error: errorMessage, templateName, effectiveRecipient })
+      await supabase.from('email_send_log').insert({
+        message_id: messageId,
+        template_name: templateName,
+        recipient_email: effectiveRecipient,
+        status: 'failed',
+        error_message: errorMessage.slice(0, 1000),
+      })
+      const testingOnlyOwnInbox =
+        /only send testing emails to your own email|validate.*from|domain is not verified/i.test(
+          errorMessage,
+        )
+      return new Response(
+        JSON.stringify({
+          error: testingOnlyOwnInbox
+            ? 'Resend testing can only email your Resend account address (legalhubly@gmail.com) until you verify legalhubly.com. Use that email or verify your domain.'
+            : 'Failed to send email',
+          detail: errorMessage.slice(0, 300),
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+  }
+
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
     queue_name: 'transactional_emails',
     payload: {
       message_id: messageId,
       to: effectiveRecipient,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: fromAddress,
       sender_domain: SENDER_DOMAIN,
       subject: resolvedSubject,
       html,
@@ -338,6 +403,21 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+  }
+
+  // Kick the queue worker so mail doesn't sit forever without cron
+  try {
+    await fetch(`${supabaseUrl}/functions/v1/process-email-queue`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${supabaseServiceKey}`,
+        apikey: supabaseServiceKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    })
+  } catch (kickError) {
+    console.warn('process-email-queue kick failed', kickError)
   }
 
   console.log('Transactional email enqueued', { templateName, effectiveRecipient })

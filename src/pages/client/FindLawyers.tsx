@@ -3,15 +3,16 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Star, MapPin, Shield, ArrowUpDown,
-  Briefcase, Scale, ArrowLeft, ArrowRight,
-  User, Building2, Award, Search, Info, Heart, Sparkles, ExternalLink, Zap,
+  Star, MapPin, Shield,
+  Briefcase, Scale, ArrowLeft,
+  Building2, Award, Search, Heart, Sparkles, ExternalLink, Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { openLawyerWebsite } from "@/lib/lawyerWebsite";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -136,19 +137,21 @@ function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer;
 
           {/* CTAs */}
           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 shrink-0">
-            {lawyer.website_url ? (
-              <Button variant="gold" size="default" asChild className="gap-2">
-                <a href={lawyer.website_url} target="_blank" rel="noopener noreferrer">
-                  Visit Website <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
-            ) : (
-              <Button variant="gold" size="default" asChild>
-                <Link to={`/client/lawyer/${lawyer.id}`}>
-                  View Profile <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="gold"
+              size="default"
+              className="gap-2"
+              onClick={() =>
+                openLawyerWebsite({
+                  websiteUrl: lawyer.website_url,
+                  name: lawyer.name,
+                  firm: lawyer.firm,
+                })
+              }
+            >
+              Visit Website <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="outline" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>
             </Button>

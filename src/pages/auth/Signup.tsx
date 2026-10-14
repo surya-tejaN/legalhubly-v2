@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useDashboardPath, type AppRole } from "@/contexts/AuthContext";
@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { Scale, Mail, Lock, User, MapPin, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Scale, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import PasswordStrengthMeter, { validatePassword } from "@/components/PasswordStrengthMeter";
+import CitySelect from "@/components/CitySelect";
 import { cn } from "@/lib/utils";
 
 const ROLES: { value: AppRole; label: string; desc: string }[] = [
@@ -50,7 +51,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState("Chicago");
   const [role, setRole] = useState<AppRole>("client");
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,22 +64,14 @@ export default function Signup() {
   const [shake, setShake] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  /** Blocks dashboard redirect while signup → OTP is in progress (session can fire mid-request). */
+  const otpFlowRef = useRef(false);
 
   useEffect(() => {
     if (resendIn <= 0) return;
     const t = window.setTimeout(() => setResendIn((s) => s - 1), 1000);
     return () => window.clearTimeout(t);
   }, [resendIn]);
-
-  // During OTP step, ignore auto-redirect so the user can finish verification
-  if (!loading && user && step === "form") {
-    return <Navigate to={dashboardPath} replace />;
-  }
-
-  const triggerShake = () => {
-    setShake(true);
-    window.setTimeout(() => setShake(false), 450);
-  };
 
   const sendOtp = useCallback(async (uid: string, addr: string) => {
     const result = await generateEmailOtp(uid, addr);
@@ -90,6 +83,16 @@ export default function Signup() {
     toast.success("Verification code sent — check your inbox.");
     return true;
   }, []);
+
+  // Only redirect logged-in users who are NOT mid-signup / OTP
+  if (!loading && user && step === "form" && !submitting && !otpFlowRef.current) {
+    return <Navigate to={dashboardPath} replace />;
+  }
+
+  const triggerShake = () => {
+    setShake(true);
+    window.setTimeout(() => setShake(false), 450);
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,8 +116,14 @@ export default function Signup() {
       toast.error("Please use a valid email address from a real email provider.");
       return;
     }
+    if (!city.trim()) {
+      toast.error("Please select your city.");
+      return;
+    }
 
     setSubmitting(true);
+    otpFlowRef.current = true;
+
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: trimmedEmail,
       password,
@@ -126,6 +135,7 @@ export default function Signup() {
     });
 
     if (error) {
+      otpFlowRef.current = false;
       if (error.message.includes("already registered") || error.message.includes("already been registered")) {
         toast.error("This email is already registered. Please login instead.");
       } else if (error.message.toLowerCase().includes("rate")) {
@@ -138,22 +148,20 @@ export default function Signup() {
     }
 
     if (!signUpData.user) {
+      otpFlowRef.current = false;
       toast.error("Could not create account. Please try again.");
       setSubmitting(false);
       return;
     }
 
     if (signUpData.user.identities && signUpData.user.identities.length === 0) {
+      otpFlowRef.current = false;
       toast.error("This email is already registered. Please login or reset your password.");
       setSubmitting(false);
       return;
     }
 
-    // Clear any auto-session so AuthContext doesn't yank us off the OTP screen
-    if (signUpData.session) {
-      await supabase.auth.signOut({ scope: "local" });
-    }
-
+    // Switch to OTP UI immediately so AuthContext session can't redirect away
     setUserId(signUpData.user.id);
     setPendingEmail(trimmedEmail);
     setPendingPassword(password);
@@ -161,9 +169,14 @@ export default function Signup() {
     setOtpError("");
     setStep("otp");
 
+    // Clear auto-session (email autoconfirm) so user must verify OTP first
+    if (signUpData.session) {
+      await supabase.auth.signOut({ scope: "local" });
+    }
+
     const sent = await sendOtp(signUpData.user.id, trimmedEmail);
     if (!sent) {
-      toast.message("Account created. Use Resend if the code did not arrive.");
+      toast.message("Account created. Tap Resend code if the email did not arrive.");
     }
     setSubmitting(false);
   };
@@ -297,6 +310,7 @@ export default function Signup() {
               type="button"
               className="text-accent hover:underline font-medium text-sm"
               onClick={() => {
+                otpFlowRef.current = false;
                 setStep("form");
                 setOtp("");
                 setOtpError("");
@@ -327,7 +341,7 @@ export default function Signup() {
             <span className="font-serif text-2xl font-bold text-foreground">Legalhubly</span>
           </Link>
           <h1 className="font-serif text-3xl font-bold text-foreground">Create your account</h1>
-          <p className="mt-2 text-muted-foreground">Get started in minutes</p>
+          <p className="mt-2 text-muted-foreground">Sign up with email — verify with a 6-digit code</p>
         </div>
 
         {(providers.google || providers.apple) && (
@@ -356,11 +370,16 @@ export default function Signup() {
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">or sign up with email</span>
+                <span className="bg-background px-2 text-muted-foreground">or continue with email</span>
               </div>
             </div>
           </>
         )}
+
+        <div className="rounded-xl border border-border/80 bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
+          <Mail className="h-3.5 w-3.5 text-accent shrink-0" />
+          Email signup with OTP verification — no magic link required
+        </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="space-y-2">
@@ -396,13 +415,7 @@ export default function Signup() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input id="city" placeholder="New York, NY" className="pl-10" value={city} onChange={(e) => setCity(e.target.value)} maxLength={100} />
-            </div>
-          </div>
+          <CitySelect value={city} onChange={setCity} required />
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>

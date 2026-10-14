@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Scale, Shield, ArrowRight, Sparkles, MapPin, Briefcase,
   Menu, X, Star, Clock, BadgeCheck, Search,
@@ -65,10 +66,10 @@ const testimonials = [
   { name: "Maria Santos", role: "Immigration Client", quote: "The guided process made everything clear before I even spoke to a lawyer.", rating: 5, initials: "MS" },
 ];
 
-const trustPoints = [
-  { icon: BadgeCheck, value: "500+", label: "Verified Lawyers" },
-  { icon: Star, value: "98%", label: "Client Satisfaction" },
-  { icon: Clock, value: "< 2hr", label: "Avg Response Time" },
+const defaultTrustPoints = [
+  { icon: BadgeCheck, value: "—", label: "Verified Lawyers" },
+  { icon: Star, value: "—", label: "Avg Lawyer Rating" },
+  { icon: Clock, value: "—", label: "Avg Response Time" },
   { icon: Shield, value: "Free", label: "To Get Started" },
 ];
 
@@ -103,12 +104,46 @@ export default function Index() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [issueInput, setIssueInput] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const [trustPoints, setTrustPoints] = useState(defaultTrustPoints);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data, count } = await supabase
+        .from("lawyers")
+        .select("rating, avg_response_hours, verified", { count: "exact" });
+      if (!active || !data) return;
+      const total = count ?? data.length;
+      const verified = data.filter((l) => l.verified).length || total;
+      const avgRating =
+        data.length > 0
+          ? data.reduce((sum, l) => sum + (Number(l.rating) || 0), 0) / data.length
+          : 0;
+      const avgHours =
+        data.length > 0
+          ? data.reduce((sum, l) => sum + (Number(l.avg_response_hours) || 0), 0) / data.length
+          : 0;
+      setTrustPoints([
+        { icon: BadgeCheck, value: String(verified), label: "Verified Lawyers" },
+        { icon: Star, value: avgRating ? `${avgRating.toFixed(1)}★` : "—", label: "Avg Lawyer Rating" },
+        {
+          icon: Clock,
+          value: avgHours ? `~${avgHours < 1 ? "<1" : Math.round(avgHours)}hr` : "—",
+          label: "Avg Response Time",
+        },
+        { icon: Shield, value: "Free", label: "To Get Started" },
+      ]);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSmartMatch = () => {

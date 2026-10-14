@@ -12,8 +12,43 @@ export function parseEmailWebhookPayload(body: string): Record<string, unknown> 
 }
 
 const DEFAULT_SEND_PATH = "/v1/messaging/email/send";
+const RESEND_SEND_URL = "https://api.resend.com/emails";
 
 export type OutboundEmailPayload = Record<string, unknown>;
+
+async function sendViaResend(
+  payload: OutboundEmailPayload,
+  apiKey: string,
+): Promise<unknown> {
+  const to = String(payload.to || "");
+  const from = String(payload.from || "Legalhubly <onboarding@resend.dev>");
+  const subject = String(payload.subject || "Legalhubly");
+  const html = String(payload.html || "");
+  const text = typeof payload.text === "string" ? payload.text : undefined;
+
+  const response = await fetch(RESEND_SEND_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html,
+      ...(text ? { text } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const safeErrorText = errorText.length > 500 ? `${errorText.slice(0, 500)}...` : errorText;
+    throw new Error(`Resend API error: ${response.status} ${safeErrorText}`);
+  }
+
+  return await response.json();
+}
 
 export async function sendTransactionalEmail(
   payload: OutboundEmailPayload,
@@ -30,14 +65,19 @@ export async function sendTransactionalEmail(
     throw new Error("Missing email API key");
   }
 
-  const authHeader = options.authHeader ?? "Authorization";
+  // Resend keys start with re_ — send directly when no custom email API URL is set
   const sendUrl = options.sendUrl;
   const apiBaseUrl = options.apiBaseUrl?.replace(/\/$/, "");
+  if (!sendUrl && !apiBaseUrl && apiKey.startsWith("re_")) {
+    return await sendViaResend(payload, apiKey);
+  }
+
+  const authHeader = options.authHeader ?? "Authorization";
   const url = sendUrl ??
     (apiBaseUrl ? `${apiBaseUrl}${DEFAULT_SEND_PATH}` : undefined);
 
   if (!url) {
-    throw new Error("Configure TRANSACTIONAL_EMAIL_SEND_URL or TRANSACTIONAL_EMAIL_API_BASE");
+    throw new Error("Configure TRANSACTIONAL_EMAIL_SEND_URL or TRANSACTIONAL_EMAIL_API_BASE (or use a Resend re_ key)");
   }
 
   const idempotencyKey = options.idempotencyKey ?? (payload.run_id as string | undefined);

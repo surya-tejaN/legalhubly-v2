@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { openLawyerWebsite } from "@/lib/lawyerWebsite";
 
 interface Lawyer {
   id: string;
@@ -167,13 +168,21 @@ export default function LawyerProfile() {
               </div>
 
               <div className="flex flex-wrap gap-3 mt-6">
-                {lawyer.website_url && (
-                  <Button variant="gold" size="lg" asChild className="gap-2">
-                    <a href={lawyer.website_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" /> Visit Website
-                    </a>
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="gold"
+                  size="lg"
+                  className="gap-2"
+                  onClick={() =>
+                    openLawyerWebsite({
+                      websiteUrl: lawyer.website_url,
+                      name: lawyer.name,
+                      firm: lawyer.firm,
+                    })
+                  }
+                >
+                  <ExternalLink className="h-4 w-4" /> Visit Website
+                </Button>
                 <Button
                   variant="outline"
                   size="lg"
@@ -261,13 +270,20 @@ export default function LawyerProfile() {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="rounded-2xl border bg-card p-6 shadow-card sticky top-24">
-              {lawyer.website_url && (
-                <Button variant="gold" className="w-full mb-4 gap-2" asChild>
-                  <a href={lawyer.website_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4" /> Visit Website
-                  </a>
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="gold"
+                className="w-full mb-4 gap-2"
+                onClick={() =>
+                  openLawyerWebsite({
+                    websiteUrl: lawyer.website_url,
+                    name: lawyer.name,
+                    firm: lawyer.firm,
+                  })
+                }
+              >
+                <ExternalLink className="h-4 w-4" /> Visit Website
+              </Button>
               <Button variant="ghost" className="w-full gap-2" onClick={handleSave}>
                 <Heart className={cn("h-4 w-4", saved && "fill-accent text-accent")} />
                 {saved ? "Saved" : "Save Lawyer"}
