@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, MapPin, Shield, ArrowUpDown,
   Briefcase, Scale, ArrowLeft,
-  Building2, Award, Search, Heart, Sparkles, ExternalLink, Zap,
+  Building2, Award, Search, Info, Heart, Sparkles, ExternalLink, Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
