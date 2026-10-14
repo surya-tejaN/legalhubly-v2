@@ -40,7 +40,9 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
         <LogoMark className="h-9 w-9" onDark />
         {!collapsed && (
           <div className="min-w-0">
-            <span className="font-serif text-[17px] text-sidebar-accent-foreground tracking-tight block leading-tight">Legalhubly</span>
+            <span className="font-serif text-[17px] text-sidebar-accent-foreground tracking-tight block leading-tight">
+              Legalh<span className="text-accent">u</span>bly
+            </span>
             <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-accent/70">{portalLabel}</span>
           </div>
         )}

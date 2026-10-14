@@ -10,12 +10,12 @@ type Props = {
 };
 
 /**
- * Legalhubly brand mark — original geometric L + balance beam.
+ * Legalhubly LH monogram — letters as pillars + gold balance beam.
  * SVG scales cleanly for favicon, nav, and marketing.
  */
 export function LogoMark({ className, onDark }: { className?: string; onDark?: boolean }) {
-  const navy = onDark ? "#F7F4EE" : "#0B1F33";
-  const gold = "#C9A227";
+  const ink = onDark ? "#F7F4EE" : "#0B1F3A";
+  const gold = "#C4A35A";
 
   return (
     <svg
@@ -25,24 +25,29 @@ export function LogoMark({ className, onDark }: { className?: string; onDark?: b
       className={cn("shrink-0", className)}
       aria-hidden
     >
-      {/* Outer soft square */}
-      <rect x="2" y="2" width="60" height="60" rx="14" fill={onDark ? "rgba(201,162,39,0.12)" : "rgba(11,31,51,0.04)"} />
-      {/* Vertical L stem */}
-      <path
-        d="M22 14v32c0 1.1.9 2 2 2h18"
-        stroke={navy}
-        strokeWidth="5.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <rect
+        x="1"
+        y="1"
+        width="62"
+        height="62"
+        rx="14"
+        fill={onDark ? "rgba(196,163,90,0.14)" : "rgba(11,31,58,0.05)"}
       />
-      {/* Balance beam */}
-      <path d="M18 28h28" stroke={gold} strokeWidth="4" strokeLinecap="round" />
-      {/* Fulcrum diamond */}
-      <path d="M32 22l4 6-4 6-4-6 4-6z" fill={gold} />
-      {/* Left pan */}
-      <path d="M18 28c0 5 3.5 9 7 9" stroke={navy} strokeWidth="3" strokeLinecap="round" />
-      {/* Right pan */}
-      <path d="M46 28c0 5-3.5 9-7 9" stroke={navy} strokeWidth="3" strokeLinecap="round" />
+      {/* Serif L */}
+      <path
+        fill={ink}
+        d="M14 14h7.2v28.2H36v6.4H14c-1.2 0-2.2-1-2.2-2.2V16.2c0-1.2 1-2.2 2.2-2.2z"
+      />
+      {/* Serif H (interlocks with L) */}
+      <path
+        fill={ink}
+        d="M30.5 18h6.8v10.2h10.2V18H54v28.5h-6.5V36.2H37.3v10.3h-6.8V18z"
+      />
+      {/* Gold balance beam + fulcrum on H */}
+      <path d="M33 16.5h24" stroke={gold} strokeWidth="2.8" strokeLinecap="round" />
+      <circle cx="45" cy="16.5" r="2.2" fill={gold} />
+      <path d="M33 16.5v5.5c0 1.6 1.4 2.8 3 2.8" stroke={gold} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M57 16.5v5.5c0 1.6-1.4 2.8-3 2.8" stroke={gold} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -59,7 +64,9 @@ export default function Logo({ className, withWordmark = false, onDark = false, 
             wordmarkClassName,
           )}
         >
-          Legalhubly
+          Legalh
+          <span className={cn(onDark ? "text-accent" : "text-[#C4A35A]")}>u</span>
+          bly
         </span>
       )}
     </span>
