@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Star, MapPin, Shield, ArrowLeft, Globe, Briefcase,
   Heart, Award, Scale, Languages, ExternalLink,
-  CheckCircle2, Timer, Loader2, Building2, Clock, Calendar,
+  CheckCircle2, Timer, Loader2, Building2, Clock, Calendar, MessageSquare,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
 import BookConsultationDialog, { availabilityLabel } from "@/components/BookConsultationDialog";
+import { getOrCreateDirectConversation } from "@/lib/conversations";
 
 interface Lawyer {
   id: string;
@@ -40,6 +41,7 @@ interface Lawyer {
   hourly_rate: number | null;
   consultation_fee: number | null;
   next_available_date: string | null;
+  user_id: string | null;
 }
 
 const fadeUp = {
@@ -65,6 +67,7 @@ export default function LawyerProfile() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
+  const [messaging, setMessaging] = useState(false);
 
   useEffect(() => {
     if (!lawyerId) return;
@@ -108,6 +111,27 @@ export default function LawyerProfile() {
       setSaved(true);
       toast.success("Lawyer saved!");
     }
+  };
+
+  const handleMessage = async () => {
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) {
+      toast.error("Please sign in to message a lawyer");
+      navigate("/login");
+      return;
+    }
+    if (!lawyer?.user_id) {
+      toast.message("This lawyer isn’t on Legalhubly messaging yet. Book a consultation or visit their website.");
+      return;
+    }
+    setMessaging(true);
+    const { conversationId, error } = await getOrCreateDirectConversation(userId, lawyer.user_id);
+    setMessaging(false);
+    if (!conversationId) {
+      toast.error(error || "Could not start conversation");
+      return;
+    }
+    navigate(`/client/messages?c=${conversationId}`);
   };
 
   if (loading) {
@@ -206,11 +230,14 @@ export default function LawyerProfile() {
                   <Calendar className="h-4 w-4" /> Book Consultation
                 </Button>
                 <Button
+                  type="button"
                   size="lg"
                   className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
-                  asChild
+                  onClick={() => void handleMessage()}
+                  disabled={messaging}
                 >
-                  <Link to="/client/messages">Message</Link>
+                  {messaging ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  Message
                 </Button>
                 <Button
                   type="button"

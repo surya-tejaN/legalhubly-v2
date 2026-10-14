@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Search, Menu, X, User, Sun, Moon } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Search, Menu, X, User, Sun, Moon, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogoMark } from "@/components/Logo";
@@ -25,8 +25,19 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, sidebarItems, portalLabel, userName = "User", userRole = "Member" }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const runSearch = () => {
+    const q = searchQuery.trim();
+    if (!q) {
+      navigate("/client/find-lawyers");
+      return;
+    }
+    navigate(`/client/find-lawyers?q=${encodeURIComponent(q)}`);
+  };
 
   const toggleDark = () => {
     document.documentElement.classList.toggle("dark");
@@ -163,15 +174,24 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
           </Button>
 
           <div className="flex-1 flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2.5 flex-1 max-w-lg bg-muted/60 rounded-xl px-4 py-2.5 border border-border/50 transition-colors focus-within:border-accent/30 focus-within:bg-card">
+            <form
+              className="hidden sm:flex items-center gap-2.5 flex-1 max-w-lg bg-muted/60 rounded-xl px-4 py-2.5 border border-border/50 transition-colors focus-within:border-accent/30 focus-within:bg-card"
+              onSubmit={(e) => {
+                e.preventDefault();
+                runSearch();
+              }}
+            >
               <Search className="h-4 w-4 text-muted-foreground" />
               <input
-                type="text"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search lawyers..."
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                aria-label="Search lawyers"
               />
-              <kbd className="hidden lg:inline-flex text-[10px] text-muted-foreground/50 bg-background/80 border px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
-            </div>
+              <kbd className="hidden lg:inline-flex text-[10px] text-muted-foreground/50 bg-background/80 border px-1.5 py-0.5 rounded font-mono">↵</kbd>
+            </form>
           </div>
 
           <div className="flex items-center gap-2">

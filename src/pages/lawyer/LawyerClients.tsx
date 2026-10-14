@@ -14,16 +14,32 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { fetchMyLawyerId } from "@/lib/lawyerAccount";
 
 // ─── Leads Tab ───
 function LeadsTab() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("leads").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => { setLeads(data || []); setLoading(false); });
-  }, []);
+    if (!user) return;
+    (async () => {
+      const lawyerId = await fetchMyLawyerId(user.id);
+      if (!lawyerId) {
+        setLeads([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("lawyer_id", lawyerId)
+        .order("created_at", { ascending: false });
+      setLeads(data || []);
+      setLoading(false);
+    })();
+  }, [user]);
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-accent" /></div>;
   if (leads.length === 0) return (
@@ -66,13 +82,28 @@ function LeadsTab() {
 
 // ─── Cases Tab ───
 function CasesTab() {
+  const { user } = useAuth();
   const [matters, setMatters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("matters").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => { setMatters(data || []); setLoading(false); });
-  }, []);
+    if (!user) return;
+    (async () => {
+      const lawyerId = await fetchMyLawyerId(user.id);
+      if (!lawyerId) {
+        setMatters([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("matters")
+        .select("*")
+        .eq("lawyer_id", lawyerId)
+        .order("created_at", { ascending: false });
+      setMatters(data || []);
+      setLoading(false);
+    })();
+  }, [user]);
 
   const statusVariant = (s: string) => s === "active" ? "success" as const : s === "closed" ? "default" as const : "warning" as const;
 
@@ -205,13 +236,28 @@ function MessagesTab() {
 
 // ─── Consultations Tab ───
 function ConsultationsTab() {
+  const { user } = useAuth();
   const [consultations, setConsultations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("consultations").select("*").order("scheduled_at", { ascending: false })
-      .then(({ data }) => { setConsultations(data || []); setLoading(false); });
-  }, []);
+    if (!user) return;
+    (async () => {
+      const lawyerId = await fetchMyLawyerId(user.id);
+      if (!lawyerId) {
+        setConsultations([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("consultations")
+        .select("*")
+        .eq("lawyer_id", lawyerId)
+        .order("scheduled_at", { ascending: false });
+      setConsultations(data || []);
+      setLoading(false);
+    })();
+  }, [user]);
 
   const statusVariant = (s: string) => s === "scheduled" ? "info" as const : s === "completed" ? "success" as const : "default" as const;
 

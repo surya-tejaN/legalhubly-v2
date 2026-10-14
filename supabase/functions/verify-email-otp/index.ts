@@ -6,12 +6,25 @@ const MAX_VERIFY_ATTEMPTS = 5;
 const OTP_TTL_MS = 10 * 60 * 1000;
 const LOCKOUT_MS = 15 * 60 * 1000;
 
-function json(data: Record<string, unknown>, status = 200, req?: Request) {
-  const corsHeaders = req ? corsHeadersFor(req) : {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-  };
+function json(
+  data: Record<string, unknown>,
+  statusOrReq: number | Request = 200,
+  maybeReq?: Request,
+) {
+  // Accept json(data, req) or json(data, status, req) — never pass Request as status
+  const status = typeof statusOrReq === "number" ? statusOrReq : 200;
+  const req = typeof statusOrReq === "number" ? maybeReq : statusOrReq;
+  const corsHeaders = req
+    ? {
+        ...corsHeadersFor(req),
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      }
+    : {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers":
+          "authorization, x-client-info, apikey, content-type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      };
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -136,6 +149,13 @@ Deno.serve(async (req) => {
       return json({ error: "Email does not match this account." }, 400, req);
     }
 
+    // Block OTP spam against already-verified accounts (allow brand-new autoconfirm signups)
+    const createdMs = new Date(authUser.user.created_at || 0).getTime();
+    const isBrandNew = Number.isFinite(createdMs) && Date.now() - createdMs < 30 * 60 * 1000;
+    if (authUser.user.email_confirmed_at && !isBrandNew) {
+      return json({ error: "This email is already verified. Please sign in." }, 400, req);
+    }
+
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count } = await supabase
       .from("email_verification_codes")
@@ -183,7 +203,7 @@ Deno.serve(async (req) => {
       return json({ error: "Failed to send verification email. Please try again." }, 500, req);
     }
 
-    return json({ success: true }, req);
+    return json({ success: true }, 200, req);
   }
 
   // ─── VERIFY OTP ───
@@ -266,7 +286,7 @@ Deno.serve(async (req) => {
       .eq("verified", false);
 
     console.log("Email verified successfully", { email, userId: record.user_id });
-    return json({ success: true, verified: true }, req);
+    return json({ success: true, verified: true }, 200, req);
   }
 
   return json({ error: 'Invalid action. Use "generate" or "verify".' }, 400, req);

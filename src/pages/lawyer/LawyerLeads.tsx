@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { lawyerNavItems } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchMyLawyerId } from "@/lib/lawyerAccount";
 import { SectionHeader, StatusBadge } from "@/components/DashboardComponents";
 import { Users, Loader2, Mail, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,17 +22,28 @@ interface Lead {
 }
 
 export default function LawyerLeads() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
+      const lawyerId = await fetchMyLawyerId(user.id);
+      if (!lawyerId) {
+        setLeads([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("lawyer_id", lawyerId)
+        .order("created_at", { ascending: false });
       setLeads(data || []);
       setLoading(false);
     })();
-  }, []);
+  }, [user]);
 
   return (
     <DashboardLayout sidebarItems={lawyerNavItems} portalLabel="Lawyer Portal" userName={profile?.full_name || "Lawyer"} userRole="Lawyer">

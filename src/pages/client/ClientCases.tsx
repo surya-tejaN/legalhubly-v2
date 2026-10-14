@@ -38,6 +38,7 @@ export default function ClientCases() {
       const { data } = await supabase
         .from("matters")
         .select("*")
+        .eq("client_user_id", user.id)
         .order("created_at", { ascending: false });
       setMatters(data || []);
       setLoading(false);

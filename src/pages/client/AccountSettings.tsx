@@ -128,18 +128,27 @@ export default function AccountSettings() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await supabase.functions.invoke("delete-account", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
+      if (!session) {
+        toast.error("Please sign in again to delete your account.");
+        setDeleting(false);
+        return;
       }
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || error?.message || "Could not delete account.");
+        setDeleting(false);
+        return;
+      }
+      await signOut();
+      toast.success("Your account has been deleted.");
+      navigate("/");
     } catch (e) {
       console.error("Delete account error:", e);
+      toast.error("Could not delete account. Please try again.");
+      setDeleting(false);
     }
-
-    await signOut();
-    toast.success("Your account has been deleted.");
-    navigate("/");
   };
 
   return (

@@ -136,6 +136,7 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
 
     const { error } = await supabase.from("consultations").insert({
       lawyer_id: lawyer.id,
+      client_user_id: user.id,
       client_name: clientName,
       title: `Consultation with ${lawyer.name}`,
       scheduled_at: slot,

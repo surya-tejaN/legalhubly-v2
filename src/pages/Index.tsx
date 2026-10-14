@@ -470,15 +470,19 @@ export default function Index() {
             </div>
             {[
               { title: "Platform", links: [{ label: "Find a Lawyer", href: "/client/find-lawyers" }, { label: "Practice Areas", href: "#practice-areas" }, { label: "How It Works", href: "#how" }] },
-              { title: "Resources", links: [{ label: "About", href: "#" }, { label: "Blog", href: "#" }] },
-              { title: "Company", links: [{ label: "Privacy Policy", href: "#" }, { label: "Terms of Service", href: "#" }, { label: "Contact", href: "#" }] },
+              { title: "Resources", links: [{ label: "About", href: "/about" }, { label: "Contact", href: "/contact" }] },
+              { title: "Company", links: [{ label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }, { label: "Contact", href: "/contact" }] },
             ].map((col) => (
               <div key={col.title}>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4">{col.title}</h4>
                 <ul className="space-y-2.5">
                   {col.links.map((link) => (
                     <li key={link.label}>
-                      <Link to={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{link.label}</Link>
+                      {link.href.startsWith("#") ? (
+                        <a href={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{link.label}</a>
+                      ) : (
+                        <Link to={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{link.label}</Link>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -488,8 +492,8 @@ export default function Index() {
           <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">© 2026 Legalhubly. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy</a>
-              <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms</a>
+              <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+              <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
             </div>
           </div>
         </div>

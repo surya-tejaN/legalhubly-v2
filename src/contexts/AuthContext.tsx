@@ -40,9 +40,9 @@ export function useDashboardPath(role?: AppRole | null): string {
     case "lawyer":
       return "/lawyer/dashboard";
     case "firm_admin":
+      return "/firm/dashboard";
     case "platform_admin":
-      // Firm/admin dashboards not shipped yet — land on lawyer tools
-      return "/lawyer/dashboard";
+      return "/admin/dashboard";
     default:
       return "/client/dashboard";
   }

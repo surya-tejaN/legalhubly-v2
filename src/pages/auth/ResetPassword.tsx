@@ -22,18 +22,25 @@ export default function ResetPassword() {
     let active = true;
     const hash = window.location.hash;
     const params = new URLSearchParams(window.location.search);
-    if (hash.includes("type=recovery") || params.get("type") === "recovery") {
+    const isRecoveryLink =
+      hash.includes("type=recovery") || params.get("type") === "recovery";
+
+    if (isRecoveryLink) {
       setReady(true);
     }
 
-    // PKCE / code exchange often lands with a session before PASSWORD_RECOVERY fires
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) setReady(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Only accept the recovery event — not a normal signed-in session
+      if (event === "PASSWORD_RECOVERY") setReady(true);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
-    });
+    // PKCE may exchange before PASSWORD_RECOVERY; accept session only with recovery markers
+    if (isRecoveryLink) {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (active && data.session) setReady(true);
+      });
+    }
+
     return () => {
       active = false;
       subscription.unsubscribe();

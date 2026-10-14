@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { lawyerNavItems } from "@/lib/navigation";
@@ -8,10 +8,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SectionHeader } from "@/components/DashboardComponents";
 import {
   User, Camera, Lock, Trash2, Save, AlertTriangle,
-  Settings, CreditCard, Bell,
+  CreditCard, Briefcase, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -80,9 +88,26 @@ function ProfileTab() {
     setDeleting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) await supabase.functions.invoke("delete-account", { headers: { Authorization: `Bearer ${session.access_token}` } });
-    } catch {}
-    await signOut(); toast.success("Account deleted."); navigate("/");
+      if (!session) {
+        toast.error("Please sign in again to delete your account.");
+        setDeleting(false);
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || error?.message || "Could not delete account.");
+        setDeleting(false);
+        return;
+      }
+      await signOut();
+      toast.success("Account deleted.");
+      navigate("/");
+    } catch {
+      toast.error("Could not delete account. Please try again.");
+      setDeleting(false);
+    }
   };
 
   return (
@@ -176,18 +201,192 @@ function SubscriptionTab() {
   );
 }
 
+// ─── Public Listing Tab ───
+function ListingTab() {
+  const { user, profile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [lawyerId, setLawyerId] = useState<string | null>(null);
+  const [bio, setBio] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [practiceAreas, setPracticeAreas] = useState("");
+  const [consultationFee, setConsultationFee] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [availability, setAvailability] = useState("available");
+  const [firm, setFirm] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("lawyers")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) {
+        setLawyerId(data.id);
+        setBio(data.bio || "");
+        setShortDescription(data.short_description || "");
+        setWebsiteUrl(data.website_url || "");
+        setPracticeAreas((data.practice_areas || []).join(", "));
+        setConsultationFee(data.consultation_fee != null ? String(data.consultation_fee) : "");
+        setHourlyRate(data.hourly_rate != null ? String(data.hourly_rate) : "");
+        setAvailability(data.availability_status || "available");
+        setFirm(data.firm || "");
+      } else {
+        setFirm(profile?.full_name ? `${profile.full_name} Law` : "");
+      }
+      setLoading(false);
+    })();
+  }, [user, profile?.full_name]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    const areas = practiceAreas
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const payload = {
+      bio: bio.trim() || null,
+      short_description: shortDescription.trim() || null,
+      website_url: websiteUrl.trim() || null,
+      practice_areas: areas,
+      consultation_fee: consultationFee === "" ? null : Number(consultationFee),
+      hourly_rate: hourlyRate === "" ? null : Number(hourlyRate),
+      availability_status: availability,
+      firm: firm.trim() || "Independent",
+      city: LAUNCH_CITY,
+      state: "IL",
+      user_id: user.id,
+      name: profile?.full_name || user.email?.split("@")[0] || "Attorney",
+      avatar_initials: (profile?.full_name || "AT")
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase(),
+    };
+
+    if (lawyerId) {
+      const { error } = await supabase.from("lawyers").update(payload).eq("id", lawyerId).eq("user_id", user.id);
+      if (error) toast.error(error.message || "Failed to save listing");
+      else toast.success("Public listing updated");
+    } else {
+      const { data, error } = await supabase.from("lawyers").insert(payload).select("id").single();
+      if (error) toast.error(error.message || "Failed to create listing");
+      else {
+        setLawyerId(data.id);
+        toast.success("Public listing created");
+      }
+    }
+    setSaving(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-7 w-7 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <motion.div {...anim(0)}>
+        <div className="rounded-xl bg-card border shadow-card p-6 space-y-4">
+          <div>
+            <h2 className="font-semibold text-foreground">Public listing</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              This is what clients see when they find you on Legalhubly.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Firm name</Label>
+            <Input value={firm} onChange={(e) => setFirm(e.target.value)} placeholder="Your firm" />
+          </div>
+          <div className="space-y-2">
+            <Label>Short description</Label>
+            <Input
+              value={shortDescription}
+              onChange={(e) => setShortDescription(e.target.value)}
+              placeholder="One-line summary for search results"
+              maxLength={160}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Bio</Label>
+            <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={5} placeholder="About your practice…" />
+          </div>
+          <div className="space-y-2">
+            <Label>Practice areas (comma-separated)</Label>
+            <Input
+              value={practiceAreas}
+              onChange={(e) => setPracticeAreas(e.target.value)}
+              placeholder="Family Law, Immigration, Estate Planning"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Website</Label>
+            <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Consultation fee ($)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={consultationFee}
+                onChange={(e) => setConsultationFee(e.target.value)}
+                placeholder="0 for free"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Hourly rate ($)</Label>
+              <Input type="number" min={0} value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Availability</Label>
+            <Select value={availability} onValueChange={setAvailability}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available to book</SelectItem>
+                <SelectItem value="busy">Busy — future slots</SelectItem>
+                <SelectItem value="unavailable">Not booking</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button onClick={() => void handleSave()} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {lawyerId ? "Save listing" : "Create listing"}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main Page ───
 export default function LawyerSettings() {
   const { profile } = useAuth();
 
   return (
     <DashboardLayout sidebarItems={lawyerNavItems} portalLabel="Lawyer Portal" userName={profile?.full_name || "Lawyer"} userRole="Lawyer">
-      <SectionHeader title="Settings" subtitle="Manage your profile, subscription, and preferences" />
+      <SectionHeader title="Settings" subtitle="Manage your profile, listing, and subscription" />
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="w-full justify-start bg-muted/50 p-1 rounded-xl mb-6 flex-wrap h-auto gap-1">
           <TabsTrigger value="profile" className="gap-2 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
             <User className="h-4 w-4" /> Profile
+          </TabsTrigger>
+          <TabsTrigger value="listing" className="gap-2 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
+            <Briefcase className="h-4 w-4" /> Public listing
           </TabsTrigger>
           <TabsTrigger value="subscription" className="gap-2 rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
             <CreditCard className="h-4 w-4" /> Subscription
@@ -195,6 +394,7 @@ export default function LawyerSettings() {
         </TabsList>
 
         <TabsContent value="profile"><ProfileTab /></TabsContent>
+        <TabsContent value="listing"><ListingTab /></TabsContent>
         <TabsContent value="subscription"><SubscriptionTab /></TabsContent>
       </Tabs>
     </DashboardLayout>

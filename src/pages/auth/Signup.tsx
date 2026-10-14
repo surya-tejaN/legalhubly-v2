@@ -66,6 +66,7 @@ export default function Signup() {
   const [shake, setShake] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  const [oauthReady, setOauthReady] = useState(false);
   /** Blocks dashboard redirect while signup → OTP is in progress (session can fire mid-request). */
   const otpFlowRef = useRef(false);
 
@@ -75,19 +76,42 @@ export default function Signup() {
     return () => window.clearTimeout(t);
   }, [resendIn]);
 
+  // After OAuth return: apply intended lawyer role before dashboard redirect
+  useEffect(() => {
+    if (loading || !user || step !== "form" || otpFlowRef.current || submitting) return;
+    let cancelled = false;
+    (async () => {
+      const intended = localStorage.getItem("signup_intended_role");
+      if (intended) {
+        localStorage.removeItem("signup_intended_role");
+        if (intended === "lawyer") {
+          const { error } = await supabase.rpc("apply_signup_role", { requested: "lawyer" });
+          if (error) console.error("[signup] apply_signup_role", error.message);
+          await refreshProfile();
+        }
+      }
+      if (!cancelled) setOauthReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, step, submitting, refreshProfile]);
+
   const sendOtp = useCallback(async (uid: string, addr: string) => {
     const result = await generateEmailOtp(uid, addr);
     if (result.error) {
+      setOtpError(result.error);
       toast.error(result.error);
       return false;
     }
+    setOtpError("");
     setResendIn(RESEND_COOLDOWN_SEC);
     toast.success("Verification code sent — check your inbox.");
     return true;
   }, []);
 
   // Only redirect logged-in users who are NOT mid-signup / OTP
-  if (!loading && user && step === "form" && !submitting && !otpFlowRef.current) {
+  if (!loading && user && step === "form" && !submitting && !otpFlowRef.current && oauthReady) {
     return <Navigate to={dashboardPath} replace />;
   }
 
@@ -226,29 +250,22 @@ export default function Signup() {
 
   const oauthRedirect = `${window.location.origin}/signup`;
 
-  const handleGoogleSignup = async () => {
+  const startOAuth = async (provider: "google" | "apple") => {
+    localStorage.setItem("signup_intended_role", role);
     setSubmitting(true);
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: oauthRedirect },
     });
     if (error) {
-      toast.error(error.message || "Google sign-in failed");
+      localStorage.removeItem("signup_intended_role");
+      toast.error(error.message || `${provider === "google" ? "Google" : "Apple"} sign-in failed`);
       setSubmitting(false);
     }
   };
 
-  const handleAppleSignup = async () => {
-    setSubmitting(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: { redirectTo: oauthRedirect },
-    });
-    if (error) {
-      toast.error(error.message || "Apple sign-in failed");
-      setSubmitting(false);
-    }
-  };
+  const handleGoogleSignup = () => void startOAuth("google");
+  const handleAppleSignup = () => void startOAuth("apple");
 
   // ── OTP ENTRY SCREEN ──
   if (step === "otp") {
@@ -343,7 +360,24 @@ export default function Signup() {
             <Logo withWordmark wordmarkClassName="text-2xl font-bold" />
           </Link>
           <h1 className="font-serif text-3xl font-bold text-foreground">Create your account</h1>
-          <p className="mt-2 text-muted-foreground">Sign up with email — verify with a 6-digit code</p>
+          <p className="mt-2 text-muted-foreground">Chicago legal marketplace — choose how you&apos;ll use Legalhubly</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>I am a…</Label>
+          <div className="grid grid-cols-2 gap-3">
+            {ROLES.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => setRole(r.value)}
+                className={`rounded-xl border px-4 py-3 text-left transition-all ${role === r.value ? "border-accent bg-accent/10 ring-1 ring-accent" : "border-border bg-card hover:bg-muted"}`}
+              >
+                <div className={`text-sm font-medium ${role === r.value ? "text-accent-foreground" : "text-foreground"}`}>{r.label}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{r.desc}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {(providers.google || providers.apple) && (
@@ -384,23 +418,6 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
-          <div className="space-y-2">
-            <Label>I am a…</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {ROLES.map((r) => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => setRole(r.value)}
-                  className={`rounded-xl border px-4 py-3 text-left transition-all ${role === r.value ? "border-accent bg-accent/10 ring-1 ring-accent" : "border-border bg-card hover:bg-muted"}`}
-                >
-                  <div className={`text-sm font-medium ${role === r.value ? "text-accent-foreground" : "text-foreground"}`}>{r.label}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">{r.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="name">Full name</Label>
             <div className="relative">

@@ -30,7 +30,15 @@ export default function Login() {
     return () => window.clearInterval(t);
   }, [cooldown]);
 
-  if (!loading && user) return <Navigate to={dashboardPath} replace />;
+  // Wait for profile so lawyer/admin don't flash into client dashboard
+  if (!loading && user && profile) return <Navigate to={dashboardPath} replace />;
+  if (!loading && user && !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();

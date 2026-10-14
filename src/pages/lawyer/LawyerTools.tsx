@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { fetchMyLawyerId } from "@/lib/lawyerAccount";
 
 // ─── Documents Tab ───
 function DocumentsTab() {
@@ -177,13 +178,30 @@ function BillingTab() {
 
 // ─── Calendar Tab ───
 function CalendarTab() {
+  const { user } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("consultations").select("*").gte("scheduled_at", new Date().toISOString()).order("scheduled_at", { ascending: true }).limit(20)
-      .then(({ data }) => { setEvents(data || []); setLoading(false); });
-  }, []);
+    if (!user) return;
+    (async () => {
+      const lawyerId = await fetchMyLawyerId(user.id);
+      if (!lawyerId) {
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("consultations")
+        .select("*")
+        .eq("lawyer_id", lawyerId)
+        .gte("scheduled_at", new Date().toISOString())
+        .order("scheduled_at", { ascending: true })
+        .limit(20);
+      setEvents(data || []);
+      setLoading(false);
+    })();
+  }, [user]);
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-accent" /></div>;
   if (events.length === 0) return (

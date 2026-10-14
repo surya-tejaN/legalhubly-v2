@@ -23,7 +23,7 @@ function CasesTab() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("matters").select("*").order("created_at", { ascending: false })
+    supabase.from("matters").select("*").eq("client_user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => { setMatters(data || []); setLoading(false); });
   }, [user]);
 
@@ -262,7 +262,7 @@ function PaymentsTab() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("payments").select("*").order("created_at", { ascending: false })
+    supabase.from("payments").select("*").eq("client_user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => { setPayments(data || []); setLoading(false); });
   }, [user]);
 
@@ -306,7 +306,11 @@ function ConsultationsTab() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("consultations").select("*").order("scheduled_at", { ascending: false })
+    supabase
+      .from("consultations")
+      .select("*")
+      .eq("client_user_id", user.id)
+      .order("scheduled_at", { ascending: false })
       .then(({ data }) => { setConsultations(data || []); setLoading(false); });
   }, [user]);
 

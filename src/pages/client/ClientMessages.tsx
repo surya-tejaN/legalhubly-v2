@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { clientNavItems } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,8 @@ interface Message {
 
 export default function ClientMessages() {
   const { user, profile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const requestedConvo = searchParams.get("c");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvo, setActiveConvo] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -41,18 +44,22 @@ export default function ClientMessages() {
         .select("conversation_id")
         .eq("user_id", user.id);
       if (parts && parts.length > 0) {
-        const ids = parts.map((p: any) => p.conversation_id);
+        const ids = parts.map((p: { conversation_id: string }) => p.conversation_id);
         const { data: convos } = await supabase
           .from("conversations")
           .select("*")
           .in("id", ids)
           .order("updated_at", { ascending: false });
         setConversations(convos || []);
-        if (convos && convos.length > 0) setActiveConvo(convos[0].id);
+        if (requestedConvo && ids.includes(requestedConvo)) {
+          setActiveConvo(requestedConvo);
+        } else if (convos && convos.length > 0) {
+          setActiveConvo(convos[0].id);
+        }
       }
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, requestedConvo]);
 
   useEffect(() => {
     if (!activeConvo) return;
@@ -97,10 +104,15 @@ export default function ClientMessages() {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>
       ) : conversations.length === 0 ? (
-        <div className="text-center py-20 rounded-xl bg-card border">
+        <div className="text-center py-20 rounded-xl bg-card border px-4">
           <MessageSquare className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
           <h3 className="font-serif text-lg text-foreground mb-2">No messages yet</h3>
-          <p className="text-sm text-muted-foreground">Your conversations with lawyers will appear here.</p>
+          <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
+            Open a lawyer&apos;s profile and tap Message to start a conversation.
+          </p>
+          <Button variant="gold" asChild>
+            <Link to="/client/find-lawyers">Find a lawyer</Link>
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">

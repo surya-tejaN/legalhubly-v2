@@ -41,6 +41,7 @@ export type Database = {
       consultations: {
         Row: {
           client_name: string
+          client_user_id: string | null
           created_at: string
           duration_minutes: number
           fee_amount: number | null
@@ -56,6 +57,7 @@ export type Database = {
         }
         Insert: {
           client_name: string
+          client_user_id?: string | null
           created_at?: string
           duration_minutes?: number
           fee_amount?: number | null
@@ -71,6 +73,7 @@ export type Database = {
         }
         Update: {
           client_name?: string
+          client_user_id?: string | null
           created_at?: string
           duration_minutes?: number
           fee_amount?: number | null
@@ -1192,6 +1195,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_signup_role: {
+        Args: { requested: string }
+        Returns: "client" | "lawyer" | "firm_admin" | "platform_admin"
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

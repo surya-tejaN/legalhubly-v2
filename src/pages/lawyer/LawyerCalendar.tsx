@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { lawyerNavItems } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchMyLawyerId } from "@/lib/lawyerAccount";
 import { SectionHeader, StatusBadge } from "@/components/DashboardComponents";
 import { Calendar, Loader2, Clock, Video } from "lucide-react";
 import { motion } from "framer-motion";
@@ -13,17 +14,28 @@ interface Consultation {
 }
 
 export default function LawyerCalendar() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data } = await supabase.from("consultations").select("*").order("scheduled_at", { ascending: true });
+      const lawyerId = await fetchMyLawyerId(user.id);
+      if (!lawyerId) {
+        setConsultations([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("consultations")
+        .select("*")
+        .eq("lawyer_id", lawyerId)
+        .order("scheduled_at", { ascending: true });
       setConsultations(data || []);
       setLoading(false);
     })();
-  }, []);
+  }, [user]);
 
   return (
     <DashboardLayout sidebarItems={lawyerNavItems} portalLabel="Lawyer Portal" userName={profile?.full_name || "Lawyer"} userRole="Lawyer">

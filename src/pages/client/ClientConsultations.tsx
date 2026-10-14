@@ -35,10 +35,12 @@ export default function ClientConsultations() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("consultations")
         .select("*")
+        .eq("client_user_id", user.id)
         .order("scheduled_at", { ascending: false });
+      if (error) console.error("[consultations]", error.message);
       setConsultations(data || []);
       setLoading(false);
     })();

@@ -36,6 +36,7 @@ export default function ClientPayments() {
       const { data } = await supabase
         .from("payments")
         .select("*")
+        .eq("client_user_id", user.id)
         .order("created_at", { ascending: false });
       setPayments(data || []);
       setLoading(false);
