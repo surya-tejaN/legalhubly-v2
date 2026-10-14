@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Legalhubly">
+  <title>Legalhubly mark</title>
+  <!-- Crisp vector LH monogram + gold scales -->
+  <g transform="translate(28,36)">
+    <!-- L -->
+    <path fill="#0B1F3A" d="
+      M 12 6
+      h 34
+      v 14
+      H 36
+      V 138
+      h 58
+      v 18
+      H 12
+      c -5.5 0 -10 -4.5 -10 -10
+      V 16
+      c 0 -5.5 4.5 -10 10 -10
+      z"/>
+    <!-- H -->
+    <path fill="#0B1F3A" d="
+      M 78 18
+      h 30
+      v 48
+      h 42
+      V 18
+      h 30
+      v 148
+      h -30
+      v -54
+      H 108
+      v 54
+      H 78
+      V 18
+      z"/>
+    <!-- Gold scales -->
+    <g fill="none" stroke="#C4A35A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 96 14 C 118 2, 150 2, 172 14"/>
+      <path d="M 134 14 V 42"/>
+      <path d="M 112 58 L 134 30 L 156 58"/>
+    </g>
+    <circle cx="134" cy="14" r="4" fill="#C4A35A"/>
+  </g>
+</svg>

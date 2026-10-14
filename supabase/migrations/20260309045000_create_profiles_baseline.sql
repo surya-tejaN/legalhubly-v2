@@ -1,4 +1,4 @@
--- Baseline profiles schema (was missing from Lovable-era migrations which assumed it existed)
+-- Baseline profiles schema
 
 DO $$ BEGIN
   CREATE TYPE public.app_role AS ENUM ('client', 'lawyer', 'firm_admin', 'platform_admin');

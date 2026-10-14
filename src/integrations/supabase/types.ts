@@ -329,6 +329,7 @@ export type Database = {
           timeline: string | null
           updated_at: string
           urgency: string | null
+          user_id: string | null
         }
         Insert: {
           ai_case_summary?: string | null
@@ -351,6 +352,7 @@ export type Database = {
           timeline?: string | null
           updated_at?: string
           urgency?: string | null
+          user_id?: string | null
         }
         Update: {
           ai_case_summary?: string | null
@@ -373,6 +375,7 @@ export type Database = {
           timeline?: string | null
           updated_at?: string
           urgency?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -960,6 +963,7 @@ export type Database = {
           rating: number
           review_text: string | null
           reviewer_name: string
+          reviewer_user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -968,6 +972,7 @@ export type Database = {
           rating?: number
           review_text?: string | null
           reviewer_name: string
+          reviewer_user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -976,6 +981,7 @@ export type Database = {
           rating?: number
           review_text?: string | null
           reviewer_name?: string
+          reviewer_user_id?: string | null
         }
         Relationships: [
           {

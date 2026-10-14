@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Legalhubly — Brand concepts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0b1f3a;
+        --gold: #c4a35a;
+        --ivory: #f7f3eb;
+        --paper: #fffdf8;
+        --line: rgba(11, 31, 58, 0.12);
+        --muted: #5c6b7a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: "DM Sans", system-ui, sans-serif;
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(196, 163, 90, 0.18), transparent 55%),
+          radial-gradient(900px 500px at 90% 0%, rgba(11, 31, 58, 0.08), transparent 50%),
+          linear-gradient(180deg, #f3eee4 0%, var(--ivory) 40%, #efe8db 100%);
+      }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+
+      header {
+        margin-bottom: 40px;
+        animation: rise 0.7s ease both;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--gold);
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        font-family: "Cormorant Garamond", Georgia, serif;
+        font-size: clamp(2.4rem, 5vw, 3.6rem);
+        font-weight: 600;
+        line-height: 1.05;
+        margin: 0 0 12px;
+        letter-spacing: -0.02em;
+      }
+
+      .lede {
+        max-width: 540px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.55;
+        margin: 0;
+      }
+
+      .section-label {
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 600;
+        margin: 48px 0 16px;
+        animation: rise 0.7s ease both;
+        animation-delay: 0.08s;
+      }
+
+      .hero-ui {
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        box-shadow: 0 30px 80px rgba(11, 31, 58, 0.12);
+        animation: rise 0.8s ease both;
+        animation-delay: 0.12s;
+      }
+
+      .hero-ui img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      @media (max-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .opt {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 22px 22px 18px;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        animation: rise 0.75s ease both;
+      }
+
+      .opt:nth-child(1) {
+        animation-delay: 0.15s;
+      }
+      .opt:nth-child(2) {
+        animation-delay: 0.22s;
+      }
+      .opt:nth-child(3) {
+        animation-delay: 0.29s;
+      }
+      .opt:nth-child(4) {
+        animation-delay: 0.36s;
+      }
+
+      .opt:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 40px rgba(11, 31, 58, 0.1);
+      }
+
+      .opt .code {
+        font-family: "Cormorant Garamond", Georgia, serif;
+        font-size: 1.55rem;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+
+      .opt .name {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0 0 6px;
+      }
+
+      .opt .meaning {
+        font-size: 0.88rem;
+        color: var(--muted);
+        line-height: 1.45;
+        margin: 0 0 16px;
+        min-height: 2.6em;
+      }
+
+      .frame {
+        background: linear-gradient(145deg, #fff 0%, #f6f1e7 100%);
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 220px;
+      }
+
+      .frame img {
+        display: block;
+        width: 100%;
+        max-width: 360px;
+        height: auto;
+      }
+
+      .frame.icon img {
+        max-width: 180px;
+      }
+
+      footer {
+        margin-top: 40px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        animation: rise 0.7s ease both;
+        animation-delay: 0.4s;
+      }
+
+      footer strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="eyebrow">Preview only · not on the live site</div>
+        <h1>Four marks with meaning</h1>
+        <p class="lede">
+          Built for a billion-dollar legal marketplace: trust, access, and one
+          hub that connects every case to the right counsel.
+        </p>
+      </header>
+
+      <div class="section-label">Product UI direction</div>
+      <div class="hero-ui">
+        <img src="./ui-hero-legalhubly.jpg" alt="Legalhubly premium hero UI concept" />
+      </div>
+
+      <div class="section-label">Logo concepts — pick one</div>
+      <div class="grid">
+        <article class="opt">
+          <p class="code">1</p>
+          <p class="name">Bridge to Justice</p>
+          <p class="meaning">
+            Client and counsel meet on a gold balance-beam bridge — matching is
+            the connection.
+          </p>
+          <div class="frame icon">
+            <img src="./logo-bridge-mark.jpg" alt="Bridge to Justice mark" />
+          </div>
+        </article>
+
+        <article class="opt">
+          <p class="code">2</p>
+          <p class="name">Portal · Access</p>
+          <p class="meaning">
+            An open doorway with a gold pillar of light — justice you can walk
+            into.
+          </p>
+          <div class="frame">
+            <img src="./logo-portal-lockup.jpg" alt="Portal lockup" />
+          </div>
+        </article>
+
+        <article class="opt">
+          <p class="code">3</p>
+          <p class="name">Hub of Clarity</p>
+          <p class="meaning">
+            One center node, every path connected — the marketplace as a trusted
+            hub.
+          </p>
+          <div class="frame icon">
+            <img src="./logo-hub-clarity.jpg" alt="Hub of Clarity icon" />
+          </div>
+        </article>
+
+        <article class="opt">
+          <p class="code">4</p>
+          <p class="name">LH Monogram</p>
+          <p class="meaning">
+            Letters become pillars + a gold beam — LH, scales, and hub in one
+            mark.
+          </p>
+          <div class="frame">
+            <img src="./logo-lh-monogram.jpg" alt="LH monogram lockup" />
+          </div>
+        </article>
+      </div>
+
+      <footer>
+        <strong>Selected: 4 — LH Monogram.</strong> Applied sitewide (nav,
+        auth, dashboard, favicon). Gold “u” in the wordmark matches the mark.
+      </footer>
+    </div>
+  </body>
+</html>

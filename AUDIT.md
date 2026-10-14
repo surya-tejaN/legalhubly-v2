@@ -38,4 +38,4 @@ Deep research of client portal, lawyer portal, auth, booking, chat, and security
 
 ---
 
-*Apply the new migration on Supabase Pro before relying on RLS in production.*
+See [SECURITY.md](./SECURITY.md) for the full ownership model. Migrations through `20261014160000_*` should be applied on the Legalhubly Supabase project.
