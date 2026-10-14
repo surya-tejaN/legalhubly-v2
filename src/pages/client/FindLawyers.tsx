@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Star, MapPin, Shield,
+  Star, MapPin, Shield, ArrowUpDown,
   Briefcase, Scale, ArrowLeft,
   Building2, Award, Search, Heart, Sparkles, ExternalLink, Zap,
 } from "lucide-react";
