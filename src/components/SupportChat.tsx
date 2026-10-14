@@ -21,7 +21,14 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "Hi — I’m Legalhubly Support for Chicago lawyers. I can guide you through the app, explain general legal processes, and help you prepare for a consultation. Use the mic for hands-free voice, attach a screenshot from your gallery, or type below. I can’t give legal advice.";
+  "I’m your Legalhubly Match Coach for Chicago. Simple, fast, and free to start:\n\n1) Describe your issue in plain language\n2) I’ll map the practice area and point you to top matches\n3) Connect — profiles, ratings, website, book, or message\n\nTell me what happened (or pick a quick start below). I can’t give legal advice.";
+
+const QUICK_STARTS = [
+  { label: "Describe my issue", prompt: "I need help finding a Chicago lawyer. Here’s my situation: " },
+  { label: "How matching works", prompt: "Explain how Legalhubly matches me to a lawyer in three steps." },
+  { label: "Find lawyers now", prompt: "Take me to Find Lawyers for Chicago and tell me how to filter by practice area." },
+  { label: "Book a consultation", prompt: "How do I book a consultation with a Chicago lawyer on Legalhubly?" },
+];
 
 export default function SupportChat() {
   const { user } = useAuth();
@@ -268,7 +275,8 @@ export default function SupportChat() {
         <div className="w-[min(100vw-2rem,400px)] h-[min(72vh,560px)] rounded-2xl border border-border bg-background shadow-elevated flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
             <div>
-              <p className="text-sm font-semibold text-foreground">Support</p>
+              <p className="text-sm font-semibold text-foreground">Match Coach</p>
+              <p className="text-[10px] text-muted-foreground">Describe → Match → Connect · Chicago</p>
             </div>
             <div className="flex items-center gap-0.5">
               {canListen && (
@@ -343,6 +351,27 @@ export default function SupportChat() {
                 {m.content || (busy && i === messages.length - 1 ? "…" : "")}
               </div>
             ))}
+
+            {user && messages.length <= 2 && !busy && (
+              <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+                {QUICK_STARTS.map((q) => (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => {
+                      if (q.prompt.endsWith(": ")) {
+                        setInput(q.prompt);
+                      } else {
+                        void send(q.prompt);
+                      }
+                    }}
+                    className="text-[11px] px-2.5 py-1.5 rounded-full border border-border bg-card text-foreground hover:border-accent/40 hover:bg-accent/5 transition-colors"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {(listening || speaking) && (
               <div className="flex items-center gap-2 px-1">
@@ -440,8 +469,8 @@ export default function SupportChat() {
                     ? handsFree
                       ? "Speak — I’ll send when you pause…"
                       : "Listening…"
-                    : "Ask, speak, or add a photo…"
-                  : "Sign in to chat…"
+                    : "Describe your legal issue in plain language…"
+                  : "Sign in to use Match Coach…"
               }
               disabled={!user || busy}
               rows={1}

@@ -48,12 +48,6 @@ const CATEGORIES = [
   { label: "International Law", practice: "International Law", icon: Earth, desc: "Trade, treaties, cross-border" },
 ];
 
-const testimonials = [
-  { name: "Jessica Park", role: "Business Owner", quote: "Found the right attorney in under 10 minutes. The whole experience felt effortless.", rating: 5, initials: "JP" },
-  { name: "David Chen", role: "Employment Attorney", quote: "Quality leads delivered straight to my inbox. Cut my intake admin by 70%.", rating: 5, initials: "DC" },
-  { name: "Maria Santos", role: "Immigration Client", quote: "The guided process made everything clear before I even spoke to a lawyer.", rating: 5, initials: "MS" },
-];
-
 const defaultTrustPoints = [
   { icon: BadgeCheck, value: "—", label: "Verified Lawyers" },
   { icon: Star, value: "—", label: "Avg Lawyer Rating" },
@@ -396,40 +390,6 @@ export default function Index() {
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2 font-sans">{s.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ TESTIMONIALS ═══ */}
-      <section id="reviews" className="py-24 md:py-32">
-        <div className="container">
-          <motion.div {...fadeUp} className="text-center mb-16 max-w-lg mx-auto">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-3 block">Testimonials</span>
-            <h2 className="text-3xl md:text-[2.75rem] font-serif text-foreground leading-tight">Trusted by thousands</h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {testimonials.map((t, i) => (
-              <motion.div key={t.name} {...fadeUp} {...staggerChild(i)}
-                className="p-8 rounded-2xl bg-card border border-border/60 shadow-card"
-              >
-                <div className="flex gap-0.5 mb-5">
-                  {[...Array(t.rating)].map((_, j) => (
-                    <Star key={j} className="h-4 w-4 text-accent fill-accent" />
-                  ))}
-                </div>
-                <p className="text-sm text-foreground leading-relaxed mb-6">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-sm font-bold text-accent">
-                    {t.initials}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{t.name}</div>
-                    <div className="text-xs text-muted-foreground">{t.role}</div>
-                  </div>
-                </div>
               </motion.div>
             ))}
           </div>
