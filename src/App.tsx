@@ -234,6 +234,9 @@ function AnimatedRoutes() {
             }
           />
 
+          <Route path="/firm/dashboard" element={page(<ComingSoon />)} />
+          <Route path="/admin/dashboard" element={page(<ComingSoon />)} />
+
           <Route path="*" element={page(<NotFound />)} />
         </Routes>
       </Suspense>

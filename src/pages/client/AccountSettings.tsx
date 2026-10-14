@@ -7,10 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import CitySelect from "@/components/CitySelect";
+import { LAUNCH_CITY } from "@/lib/location";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
-  User, Camera, Lock, MapPin, Trash2, Save, AlertTriangle,
+  User, Camera, Lock, Trash2, Save, AlertTriangle,
 } from "lucide-react";
 
 const anim = (delay: number) => ({
@@ -20,12 +22,12 @@ const anim = (delay: number) => ({
 });
 
 export default function AccountSettings() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState(profile?.full_name || "");
-  const [city, setCity] = useState(profile?.city || "");
+  const [city, setCity] = useState(profile?.city || LAUNCH_CITY);
   const [photoUrl, setPhotoUrl] = useState(profile?.profile_photo || profile?.avatar_url || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -85,13 +87,14 @@ export default function AccountSettings() {
       .from("profiles")
       .update({
         full_name: fullName.trim(),
-        city: city.trim() || null,
+        city: LAUNCH_CITY,
       } as any)
       .eq("user_id", user.id);
 
     if (error) {
       toast.error("Failed to save: " + error.message);
     } else {
+      await refreshProfile();
       toast.success("Profile updated!");
     }
     setSaving(false);
@@ -224,17 +227,7 @@ export default function AccountSettings() {
                 <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="city"
-                    placeholder="e.g. Chicago, IL"
-                    className="pl-10"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                  />
-                </div>
+                <CitySelect value={city} onChange={setCity} />
               </div>
               <Button onClick={handleSaveProfile} disabled={saving}>
                 <Save className="mr-2 h-4 w-4" />

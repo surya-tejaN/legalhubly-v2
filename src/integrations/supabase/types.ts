@@ -563,6 +563,7 @@ export type Database = {
           specialization_tags: string[]
           state: string | null
           updated_at: string
+          user_id: string | null
           verified: boolean
           website_url: string | null
         }
@@ -572,6 +573,7 @@ export type Database = {
           avg_response_hours?: number
           bio?: string | null
           budget_ranges?: string[]
+          user_id?: string | null
           city?: string | null
           city_id?: string | null
           complexity_levels?: string[]

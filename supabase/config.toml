@@ -4,29 +4,29 @@ project_id = "ubljuduaxtdojaaggqpw"
   [functions.auth-email-hook]
     verify_jwt = false
   [functions.billing-agent]
-    verify_jwt = false
+    verify_jwt = true
   [functions.client-support]
     verify_jwt = true
   [functions.create-checkout-session]
-    verify_jwt = false
+    verify_jwt = true
   [functions.create-portal-session]
-    verify_jwt = false
+    verify_jwt = true
   [functions.document-agent]
-    verify_jwt = false
+    verify_jwt = true
   [functions.follow-up-agent]
-    verify_jwt = false
+    verify_jwt = true
   [functions.handle-email-suppression]
     verify_jwt = false
   [functions.handle-email-unsubscribe]
     verify_jwt = false
   [functions.lawyer-ai]
-    verify_jwt = false
+    verify_jwt = true
   [functions.legal-intake]
-    verify_jwt = false
+    verify_jwt = true
   [functions.match-lawyers]
-    verify_jwt = false
+    verify_jwt = true
   [functions.preview-transactional-email]
-    verify_jwt = false
+    verify_jwt = true
   [functions.process-email-queue]
     verify_jwt = true
   [functions.send-transactional-email]
@@ -38,6 +38,6 @@ project_id = "ubljuduaxtdojaaggqpw"
 
 
 [auth]
-site_url = "http://127.0.0.1:5173"
-additional_redirect_urls = ["http://127.0.0.1:5173/**", "http://localhost:5173/**", "http://127.0.0.1:5173", "http://localhost:5173"]
+site_url = "https://www.legalhubly.com"
+additional_redirect_urls = ["https://www.legalhubly.com/**", "https://legalhubly.com/**", "http://127.0.0.1:5173/**", "http://localhost:5173/**"]
 enable_signup = true

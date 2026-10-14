@@ -20,6 +20,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  refreshProfile: () => Promise<Profile | null>;
   signOut: () => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  refreshProfile: async () => null,
   signOut: async () => {},
 });
 
@@ -38,9 +40,9 @@ export function useDashboardPath(role?: AppRole | null): string {
     case "lawyer":
       return "/lawyer/dashboard";
     case "firm_admin":
-      return "/firm/dashboard";
     case "platform_admin":
-      return "/admin/dashboard";
+      // Firm/admin dashboards not shipped yet — land on lawyer tools
+      return "/lawyer/dashboard";
     default:
       return "/client/dashboard";
   }
@@ -114,6 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const refreshProfile = async () => {
+    if (!user) {
+      setProfile(null);
+      return null;
+    }
+    const p = await fetchProfile(user.id);
+    setProfile(p);
+    return p;
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -122,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

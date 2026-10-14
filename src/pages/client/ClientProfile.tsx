@@ -11,22 +11,24 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/DashboardComponents";
 import {
-  User, Camera, Lock, MapPin, Trash2, Save, AlertTriangle,
+  User, Camera, Lock, Trash2, Save, AlertTriangle,
   Heart, Star, Briefcase, ArrowRight, Loader2, Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import CitySelect from "@/components/CitySelect";
+import { LAUNCH_CITY } from "@/lib/location";
 
 const anim = (delay: number) => ({ initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { delay, duration: 0.4 } });
 
 // ─── Settings Tab ───
 function SettingsTab() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(profile?.full_name || "");
-  const [city, setCity] = useState(profile?.city || "");
+  const [city, setCity] = useState(profile?.city || LAUNCH_CITY);
   const [photoUrl, setPhotoUrl] = useState(profile?.profile_photo || profile?.avatar_url || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,9 +59,12 @@ function SettingsTab() {
   const handleSaveProfile = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: fullName.trim(), city: city.trim() || null } as any).eq("user_id", user.id);
+    const { error } = await supabase.from("profiles").update({ full_name: fullName.trim(), city: LAUNCH_CITY } as any).eq("user_id", user.id);
     if (error) toast.error("Failed to save");
-    else toast.success("Profile updated!");
+    else {
+      await refreshProfile();
+      toast.success("Profile updated!");
+    }
     setSaving(false);
   };
 
@@ -128,13 +133,7 @@ function SettingsTab() {
               <Label htmlFor="email">Email</Label>
               <Input id="email" value={user?.email || ""} disabled className="bg-muted/50 text-muted-foreground" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="city" placeholder="e.g. Chicago, IL" className="pl-10" value={city} onChange={(e) => setCity(e.target.value)} />
-              </div>
-            </div>
+            <CitySelect value={city} onChange={setCity} />
             <Button onClick={handleSaveProfile} disabled={saving}><Save className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save Changes"}</Button>
           </div>
         </div>

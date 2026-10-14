@@ -10,21 +10,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionHeader } from "@/components/DashboardComponents";
 import {
-  User, Camera, Lock, MapPin, Trash2, Save, AlertTriangle,
+  User, Camera, Lock, Trash2, Save, AlertTriangle,
   Settings, CreditCard, Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import CitySelect from "@/components/CitySelect";
+import { LAUNCH_CITY } from "@/lib/location";
 
 const anim = (delay: number) => ({ initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { delay, duration: 0.4 } });
 
 // ─── Profile Tab ───
 function ProfileTab() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(profile?.full_name || "");
-  const [city, setCity] = useState(profile?.city || "");
+  const [city, setCity] = useState(profile?.city || LAUNCH_CITY);
   const [photoUrl, setPhotoUrl] = useState(profile?.profile_photo || profile?.avatar_url || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,9 +56,12 @@ function ProfileTab() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({ full_name: fullName.trim(), city: city.trim() || null } as any).eq("user_id", user.id);
+    const { error } = await supabase.from("profiles").update({ full_name: fullName.trim(), city: LAUNCH_CITY } as any).eq("user_id", user.id);
     if (error) toast.error("Failed to save");
-    else toast.success("Profile updated!");
+    else {
+      await refreshProfile();
+      toast.success("Profile updated!");
+    }
     setSaving(false);
   };
 
@@ -109,7 +114,7 @@ function ProfileTab() {
           <div className="space-y-4">
             <div className="space-y-2"><Label>Full Name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Email</Label><Input value={user?.email || ""} disabled className="bg-muted/50" /></div>
-            <div className="space-y-2"><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Chicago, IL" /></div>
+            <CitySelect value={city} onChange={setCity} />
             <Button onClick={handleSave} disabled={saving}><Save className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save"}</Button>
           </div>
         </div>

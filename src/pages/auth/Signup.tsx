@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Scale, Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import PasswordStrengthMeter, { validatePassword } from "@/components/PasswordStrengthMeter";
 import CitySelect from "@/components/CitySelect";
+import { LAUNCH_CITY } from "@/lib/location";
 import { cn } from "@/lib/utils";
 
 const ROLES: { value: AppRole; label: string; desc: string }[] = [
@@ -42,7 +43,7 @@ function isValidEmailDomain(email: string): boolean {
 }
 
 export default function Signup() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, refreshProfile } = useAuth();
   const dashboardPath = useDashboardPath(profile?.role);
   const navigate = useNavigate();
   const providers = useAuthProviders();
@@ -51,7 +52,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [city, setCity] = useState("Chicago");
+  const [city, setCity] = useState(LAUNCH_CITY);
   const [role, setRole] = useState<AppRole>("client");
   const [submitting, setSubmitting] = useState(false);
 
@@ -130,7 +131,7 @@ export default function Signup() {
       options: {
         // OTP is the verification path — avoid relying on magic-link redirect
         emailRedirectTo: `${window.location.origin}/login`,
-        data: { full_name: trimmedName, role, city: city.trim() },
+        data: { full_name: trimmedName, role, city: LAUNCH_CITY },
       },
     });
 
@@ -208,7 +209,9 @@ export default function Signup() {
     }
 
     toast.success("Email verified — welcome to Legalhubly!");
-    navigate(dashboardPath, { replace: true });
+    const fresh = await refreshProfile();
+    const path = fresh?.role === "lawyer" ? "/lawyer/dashboard" : "/client/dashboard";
+    navigate(path, { replace: true });
     setVerifying(false);
   };
 

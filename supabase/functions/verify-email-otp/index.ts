@@ -1,17 +1,17 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeadersFor } from "../_shared/cors.ts";
 
 const MAX_GENERATE_PER_HOUR = 5;
 const MAX_VERIFY_ATTEMPTS = 5;
 const OTP_TTL_MS = 10 * 60 * 1000;
 const LOCKOUT_MS = 15 * 60 * 1000;
 
-function json(data: Record<string, unknown>, status = 200) {
+function json(data: Record<string, unknown>, status = 200, req?: Request) {
+  const corsHeaders = req ? corsHeadersFor(req) : {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  };
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -89,19 +89,21 @@ async function sendOtpEmailNow({
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return json({ error: "Method not allowed" }, 405, req);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-    return json({ error: "Server configuration error" }, 500);
+    return json({ error: "Server configuration error" }, 500, req);
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -110,7 +112,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: "Invalid JSON" }, 400);
+    return json({ error: "Invalid JSON" }, 400, req);
   }
 
   const action = body.action;
@@ -121,7 +123,17 @@ Deno.serve(async (req) => {
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
 
     if (!userId || !email || !email.includes("@")) {
-      return json({ error: "userId and email required" }, 400);
+      return json({ error: "userId and email required" }, 400, req);
+    }
+
+    // Bind OTP to a real auth user + matching email (prevents account takeover)
+    const { data: authUser, error: authLookupError } = await supabase.auth.admin.getUserById(userId);
+    if (authLookupError || !authUser.user) {
+      return json({ error: "Invalid account." }, 400, req);
+    }
+    const accountEmail = (authUser.user.email || "").trim().toLowerCase();
+    if (!accountEmail || accountEmail !== email) {
+      return json({ error: "Email does not match this account." }, 400, req);
     }
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -132,7 +144,7 @@ Deno.serve(async (req) => {
       .gte("created_at", oneHourAgo);
 
     if ((count ?? 0) >= MAX_GENERATE_PER_HOUR) {
-      return json({ error: "Too many verification attempts. Please try again later." }, 429);
+      return json({ error: "Too many verification attempts. Please try again later." }, 429, req);
     }
 
     const code = generateOtp();
@@ -154,7 +166,7 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error("Failed to store OTP", insertError);
-      return json({ error: "Failed to generate code" }, 500);
+      return json({ error: "Failed to generate code" }, 500, req);
     }
 
     const emailResult = await sendOtpEmailNow({
@@ -168,10 +180,10 @@ Deno.serve(async (req) => {
     if (!emailResult.ok) {
       // Roll back unused code so resend can create a fresh one cleanly
       await supabase.from("email_verification_codes").delete().eq("user_id", userId).eq("code", codeHash);
-      return json({ error: "Failed to send verification email. Please try again." }, 500);
+      return json({ error: "Failed to send verification email. Please try again." }, 500, req);
     }
 
-    return json({ success: true });
+    return json({ success: true }, req);
   }
 
   // ─── VERIFY OTP ───
@@ -180,7 +192,7 @@ Deno.serve(async (req) => {
     const code = typeof body.code === "string" ? body.code.trim() : "";
 
     if (!email || !/^\d{6}$/.test(code)) {
-      return json({ error: "email and a 6-digit code are required" }, 400);
+      return json({ error: "email and a 6-digit code are required" }, 400, req);
     }
 
     const { data: record, error: fetchError } = await supabase
@@ -193,7 +205,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (fetchError || !record) {
-      return json({ error: "No verification code found. Please request a new one." }, 400);
+      return json({ error: "No verification code found. Please request a new one." }, 400, req);
     }
 
     const attempts = record.attempts ?? 0;
@@ -202,12 +214,12 @@ Deno.serve(async (req) => {
       if (new Date() < lockExpiry) {
         return json({
           error: "Too many attempts. Please wait a few minutes and request a new code.",
-        }, 429);
+        }, 429, req);
       }
     }
 
     if (new Date() > new Date(record.expires_at)) {
-      return json({ error: "Code expired. Please request a new one.", expired: true }, 400);
+      return json({ error: "Code expired. Please request a new one.", expired: true }, 400, req);
     }
 
     const incomingHash = await hashCode(email, code);
@@ -228,7 +240,7 @@ Deno.serve(async (req) => {
           ? `Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
           : "Too many failed attempts. Please request a new code.",
         invalid: true,
-      }, 400);
+      }, 400, req);
     }
 
     await supabase
@@ -244,7 +256,7 @@ Deno.serve(async (req) => {
       console.error("Failed to confirm user email", updateError);
       return json({
         error: "Verification succeeded but account activation failed. Please try logging in.",
-      }, 500);
+      }, 500, req);
     }
 
     await supabase
@@ -254,8 +266,8 @@ Deno.serve(async (req) => {
       .eq("verified", false);
 
     console.log("Email verified successfully", { email, userId: record.user_id });
-    return json({ success: true, verified: true });
+    return json({ success: true, verified: true }, req);
   }
 
-  return json({ error: 'Invalid action. Use "generate" or "verify".' }, 400);
+  return json({ error: 'Invalid action. Use "generate" or "verify".' }, 400, req);
 });

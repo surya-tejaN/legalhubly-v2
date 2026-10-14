@@ -49,7 +49,7 @@ const SORT_OPTIONS: { value: SortKey; label: string; icon: typeof Star }[] = [
 
 function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer; index: number; savedIds: Set<string>; onToggleSave: (id: string) => void }) {
   const isSaved = savedIds.has(lawyer.id);
-  const casesHandled = Math.round(lawyer.experience_years * 20 + lawyer.review_count * 3);
+  const hasWebsite = Boolean(lawyer.website_url?.trim());
 
   return (
     <motion.div
@@ -114,8 +114,8 @@ function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer;
                 <span className="font-medium text-foreground">{lawyer.experience_years}</span> yrs
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Scale className="h-3.5 w-3.5" />
-                <span className="font-medium text-foreground">{casesHandled}+</span> cases
+                <MapPin className="h-3.5 w-3.5" />
+                Chicago, IL
               </span>
             </div>
 
@@ -150,7 +150,7 @@ function LawyerCard({ lawyer, index, savedIds, onToggleSave }: { lawyer: Lawyer;
                 })
               }
             >
-              Visit Website <ExternalLink className="h-3.5 w-3.5" />
+              {hasWebsite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
             </Button>
             <Button variant="outline" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>
@@ -190,45 +190,65 @@ export default function FindLawyers() {
     if (!user) { toast.error("Please sign in to save lawyers"); return; }
     const isSaved = savedIds.has(lawyerId);
     if (isSaved) {
-      await supabase.from("saved_lawyers").delete().eq("user_id", user.id).eq("lawyer_id", lawyerId);
+      const { error } = await supabase.from("saved_lawyers").delete().eq("user_id", user.id).eq("lawyer_id", lawyerId);
+      if (error) { toast.error("Could not update saved lawyers"); return; }
       setSavedIds((prev) => { const next = new Set(prev); next.delete(lawyerId); return next; });
       toast.success("Removed from saved");
     } else {
-      await supabase.from("saved_lawyers").insert({ user_id: user.id, lawyer_id: lawyerId });
+      const { error } = await supabase.from("saved_lawyers").insert({ user_id: user.id, lawyer_id: lawyerId });
+      if (error) { toast.error("Could not save lawyer"); return; }
       setSavedIds((prev) => new Set(prev).add(lawyerId));
       toast.success("Lawyer saved!");
     }
     queryClient.invalidateQueries({ queryKey: ["saved-lawyers"] });
   };
 
-  // Fetch lawyers - filter by matched categories if provided
+  // Fetch Chicago lawyers - filter by matched practice areas if provided
   useEffect(() => {
     setLoading(true);
     (async () => {
-      let query = supabase.from("lawyers").select("*");
+      let query = supabase.from("lawyers").select("*").eq("city", "Chicago");
 
       if (matchedCategories.length === 1) {
         query = query.contains("practice_areas", [matchedCategories[0]]);
       }
 
-      const { data } = await query.order("rating", { ascending: false });
+      const { data, error } = await query.order("rating", { ascending: false });
+      if (error) {
+        toast.error("Could not load lawyers. Please try again.");
+        setLawyers([]);
+        setLoading(false);
+        return;
+      }
+
       let results = ((data as any[]) || []).map((l) => ({
         ...l,
         practice_areas: l.practice_areas || [],
         languages: l.languages || [],
       })) as Lawyer[];
 
-      // If multiple matched categories, filter client-side (any match)
       if (matchedCategories.length > 1) {
         results = results.filter((l) =>
           l.practice_areas.some((pa) => matchedCategories.includes(pa))
         );
       }
 
+      if (urlQuery.trim()) {
+        const q = urlQuery.toLowerCase();
+        results = results.filter(
+          (l) =>
+            l.name.toLowerCase().includes(q) ||
+            l.firm.toLowerCase().includes(q) ||
+            (l.practice_areas || []).some((pa) => pa.toLowerCase().includes(q)) ||
+            (l.short_description || "").toLowerCase().includes(q) ||
+            (l.bio || "").toLowerCase().includes(q),
+        );
+      }
+
       setLawyers(results);
       setLoading(false);
     })();
-  }, [urlMatched]);
+  }, [urlMatched, urlQuery]);
 
   // Local search filter
   const filtered = useMemo(() => {
@@ -274,7 +294,7 @@ export default function FindLawyers() {
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5 text-accent" />
-            <span className="hidden sm:inline">AI-powered matching</span>
+            <span className="hidden sm:inline">Chicago lawyers · AI matching</span>
           </div>
         </div>
       </header>

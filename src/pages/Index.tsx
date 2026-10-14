@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { matchPracticeAreas } from "@/lib/practiceAreas";
+import { LAUNCH_CITY_LABEL } from "@/lib/location";
 import {
   Scale, Shield, ArrowRight, Sparkles, MapPin, Briefcase,
   Menu, X, Star, Clock, BadgeCheck, Search,
@@ -23,42 +25,27 @@ const NAV_LINKS = [
 ];
 
 const CATEGORIES = [
-  { label: "Immigration", icon: Globe, desc: "Visas, green cards, asylum" },
-  { label: "Divorce & Family", icon: Heart, desc: "Custody, support, adoption" },
-  { label: "Criminal Defense", icon: Gavel, desc: "DUI, felony, misdemeanor" },
-  { label: "Personal Injury", icon: Shield, desc: "Accidents, malpractice" },
-  { label: "Employment Law", icon: Users, desc: "Wrongful termination, discrimination" },
-  { label: "Business Law", icon: Building2, desc: "Contracts, formation, disputes" },
-  { label: "Real Estate", icon: Home, desc: "Purchase, lease, zoning" },
-  { label: "Estate Planning", icon: ScrollText, desc: "Wills, trusts, probate" },
-  { label: "Civil Litigation", icon: Landmark, desc: "Lawsuits, appeals, mediation" },
-  { label: "Bankruptcy", icon: DollarSign, desc: "Debt relief, Chapter 7 & 13" },
-  { label: "Tax Law", icon: Receipt, desc: "IRS disputes, tax planning" },
-  { label: "Intellectual Property", icon: Brain, desc: "Patents, trademarks, copyright" },
-  { label: "Medical Malpractice", icon: Stethoscope, desc: "Negligence, surgical errors" },
-  { label: "Consumer Protection", icon: ShieldCheck, desc: "Fraud, warranties, recalls" },
-  { label: "Traffic Violations", icon: Car, desc: "Tickets, DUI, license issues" },
-  { label: "Landlord / Tenant", icon: KeyRound, desc: "Eviction, leases, deposits" },
-  { label: "Education Law", icon: GraduationCap, desc: "Student rights, IEP, Title IX" },
-  { label: "Environmental Law", icon: Leaf, desc: "Compliance, pollution, permits" },
-  { label: "Military Law", icon: Swords, desc: "Court-martial, VA benefits" },
-  { label: "International Law", icon: Earth, desc: "Trade, treaties, cross-border" },
+  { label: "Immigration", practice: "Immigration Law", icon: Globe, desc: "Visas, green cards, asylum" },
+  { label: "Divorce & Family", practice: "Family Law", icon: Heart, desc: "Custody, support, adoption" },
+  { label: "Criminal Defense", practice: "Criminal Defense", icon: Gavel, desc: "DUI, felony, misdemeanor" },
+  { label: "Personal Injury", practice: "Personal Injury", icon: Shield, desc: "Accidents, malpractice" },
+  { label: "Employment Law", practice: "Employment Law", icon: Users, desc: "Wrongful termination, discrimination" },
+  { label: "Business Law", practice: "Business Law", icon: Building2, desc: "Contracts, formation, disputes" },
+  { label: "Real Estate", practice: "Real Estate Law", icon: Home, desc: "Purchase, lease, zoning" },
+  { label: "Estate Planning", practice: "Estate Planning", icon: ScrollText, desc: "Wills, trusts, probate" },
+  { label: "Civil Litigation", practice: "Civil Litigation", icon: Landmark, desc: "Lawsuits, appeals, mediation" },
+  { label: "Bankruptcy", practice: "Bankruptcy", icon: DollarSign, desc: "Debt relief, Chapter 7 & 13" },
+  { label: "Tax Law", practice: "Tax Law", icon: Receipt, desc: "IRS disputes, tax planning" },
+  { label: "Intellectual Property", practice: "Intellectual Property", icon: Brain, desc: "Patents, trademarks, copyright" },
+  { label: "Medical Malpractice", practice: "Medical Malpractice", icon: Stethoscope, desc: "Negligence, surgical errors" },
+  { label: "Consumer Protection", practice: "Consumer Protection", icon: ShieldCheck, desc: "Fraud, warranties, recalls" },
+  { label: "Traffic Violations", practice: "Criminal Defense", icon: Car, desc: "Tickets, DUI, license issues" },
+  { label: "Landlord / Tenant", practice: "Landlord Tenant", icon: KeyRound, desc: "Eviction, leases, deposits" },
+  { label: "Education Law", practice: "Education Law", icon: GraduationCap, desc: "Student rights, IEP, Title IX" },
+  { label: "Environmental Law", practice: "Environmental Law", icon: Leaf, desc: "Compliance, pollution, permits" },
+  { label: "Military Law", practice: "Military Law", icon: Swords, desc: "Court-martial, VA benefits" },
+  { label: "International Law", practice: "International Law", icon: Earth, desc: "Trade, treaties, cross-border" },
 ];
-
-const KEYWORD_MAP: Record<string, string[]> = {
-  "Immigration": ["visa", "immigration", "green card", "asylum", "deportation", "citizenship", "h1b", "work permit", "uscis"],
-  "Divorce & Family": ["divorce", "custody", "child support", "adoption", "family", "separation", "alimony", "prenup", "marriage"],
-  "Criminal Defense": ["criminal", "crime", "arrest", "felony", "misdemeanor", "dui", "drug", "theft", "assault", "bail"],
-  "Personal Injury": ["injury", "accident", "slip", "fall", "car accident", "medical malpractice", "negligence", "hurt", "damaged"],
-  "Employment Law": ["fired", "wrongful termination", "discrimination", "harassment", "employment", "workplace", "wage", "overtime", "employer"],
-  "Business Law": ["business", "contract", "llc", "corporation", "startup", "partnership", "merger", "acquisition", "commercial"],
-  "Real Estate": ["real estate", "property", "lease", "landlord", "tenant", "zoning", "eviction", "rent", "house", "mortgage"],
-  "Estate Planning": ["will", "trust", "probate", "estate", "inheritance", "beneficiary", "power of attorney"],
-  "Civil Litigation": ["lawsuit", "sue", "court", "dispute", "mediation", "arbitration", "litigation", "claim"],
-  "Bankruptcy": ["bankruptcy", "debt", "chapter 7", "chapter 13", "foreclosure", "creditor", "collection"],
-  "Tax Law": ["tax", "irs", "audit", "tax planning", "tax dispute"],
-  "Intellectual Property": ["patent", "trademark", "copyright", "intellectual property", "ip", "trade secret"],
-};
 
 const testimonials = [
   { name: "Jessica Park", role: "Business Owner", quote: "Found the right attorney in under 10 minutes. The whole experience felt effortless.", rating: 5, initials: "JP" },
@@ -84,17 +71,6 @@ const staggerChild = (i: number) => ({
   transition: { duration: 0.5, delay: i * 0.06 },
 });
 
-function matchCategories(input: string): string[] {
-  const lower = input.toLowerCase();
-  const matches: string[] = [];
-  for (const [category, keywords] of Object.entries(KEYWORD_MAP)) {
-    if (keywords.some((kw) => lower.includes(kw))) {
-      matches.push(category);
-    }
-  }
-  return matches;
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Index() {
@@ -116,12 +92,17 @@ export default function Index() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, count } = await supabase
+      const { data, count, error } = await supabase
         .from("lawyers")
-        .select("rating, avg_response_hours, verified", { count: "exact" });
-      if (!active || !data) return;
+        .select("rating, avg_response_hours, verified", { count: "exact" })
+        .eq("city", "Chicago");
+      if (!active) return;
+      if (error || !data) {
+        setTrustPoints(defaultTrustPoints);
+        return;
+      }
       const total = count ?? data.length;
-      const verified = data.filter((l) => l.verified).length || total;
+      const verified = data.filter((l) => l.verified).length;
       const avgRating =
         data.length > 0
           ? data.reduce((sum, l) => sum + (Number(l.rating) || 0), 0) / data.length
@@ -138,7 +119,7 @@ export default function Index() {
           value: avgHours ? `~${avgHours < 1 ? "<1" : Math.round(avgHours)}hr` : "—",
           label: "Avg Response Time",
         },
-        { icon: Shield, value: "Free", label: "To Get Started" },
+        { icon: MapPin, value: String(total), label: "Chicago Lawyers" },
       ]);
     })();
     return () => {
@@ -152,7 +133,7 @@ export default function Index() {
       navigate("/client/find-lawyers");
       return;
     }
-    const matched = matchCategories(trimmed);
+    const matched = matchPracticeAreas(trimmed);
     const params = new URLSearchParams();
     params.set("q", trimmed);
     if (matched.length > 0) {
@@ -337,7 +318,7 @@ export default function Index() {
             </div>
             <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1.5">
               <Sparkles className="h-3 w-3 text-accent/60" />
-              AI-powered matching · Free to search · No account required
+              AI-powered matching · Chicago lawyers · Free to search
             </p>
           </motion.div>
         </div>
@@ -368,14 +349,14 @@ export default function Index() {
           <motion.div {...fadeUp} className="text-center mb-16 max-w-lg mx-auto">
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-3 block">Practice Areas</span>
             <h2 className="text-3xl md:text-[2.75rem] font-serif text-foreground leading-tight mb-4">Browse by legal category</h2>
-            <p className="text-muted-foreground text-lg">Select a practice area to find specialized attorneys.</p>
+            <p className="text-muted-foreground text-lg">Select a practice area to find specialized Chicago attorneys ({LAUNCH_CITY_LABEL}).</p>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
             {CATEGORIES.map((cat, i) => (
               <motion.div key={cat.label} {...fadeUp} {...staggerChild(i)}>
                 <Link
-                  to={`/client/find-lawyers?matched=${encodeURIComponent(cat.label)}`}
+                  to={`/client/find-lawyers?matched=${encodeURIComponent(cat.practice)}`}
                   className="group flex items-center gap-4 p-6 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover hover:border-accent/20 transition-all duration-300"
                 >
                   <div className="h-12 w-12 rounded-xl bg-accent/8 flex items-center justify-center shrink-0 group-hover:bg-accent/12 group-hover:scale-105 transition-all duration-300">

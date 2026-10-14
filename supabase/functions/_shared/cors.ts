@@ -1,6 +1,8 @@
 const DEFAULT_ORIGINS = [
   "http://127.0.0.1:5173",
   "http://localhost:5173",
+  "https://legalhubly.com",
+  "https://www.legalhubly.com",
 ];
 
 export function allowedOrigins(): string[] {

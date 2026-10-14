@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -9,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LAUNCH_CITY, LAUNCH_CITY_LABEL } from "@/lib/location";
 
 type Props = {
   value: string;
@@ -18,6 +18,7 @@ type Props = {
   label?: string;
 };
 
+/** Launch market: Chicago only (other cities removed until expansion). */
 export default function CitySelect({
   value,
   onChange,
@@ -25,46 +26,31 @@ export default function CitySelect({
   id = "city",
   label = "City",
 }: Props) {
-  const [cities, setCities] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await supabase.from("cities").select("name").order("name");
-      if (!active) return;
-      const names = (data || []).map((c) => c.name as string).filter(Boolean);
-      setCities(names.length > 0 ? names : ["Chicago", "New York", "Los Angeles", "Houston", "Miami"]);
-      setLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+    if (value !== LAUNCH_CITY) onChange(LAUNCH_CITY);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- force launch city once on mount/mismatch
+  }, [value]);
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}{required ? " *" : ""}</Label>
+      <Label htmlFor={id}>
+        {label}
+        {required ? " *" : ""}
+      </Label>
       <div className="relative">
         <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-        <Select
-          value={value || undefined}
-          onValueChange={onChange}
-          disabled={loading}
-          required={required}
-        >
+        <Select value={LAUNCH_CITY} onValueChange={onChange} required={required}>
           <SelectTrigger id={id} className="pl-10 h-11">
-            <SelectValue placeholder={loading ? "Loading cities…" : "Select your city"} />
+            <SelectValue placeholder={LAUNCH_CITY_LABEL} />
           </SelectTrigger>
-          <SelectContent className="max-h-64">
-            {cities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
-              </SelectItem>
-            ))}
+          <SelectContent>
+            <SelectItem value={LAUNCH_CITY}>{LAUNCH_CITY_LABEL}</SelectItem>
           </SelectContent>
         </Select>
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        Legalhubly currently serves Chicago only. More cities coming soon.
+      </p>
     </div>
   );
 }

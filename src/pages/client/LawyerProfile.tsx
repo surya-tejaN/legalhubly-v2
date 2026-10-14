@@ -163,7 +163,6 @@ export default function LawyerProfile() {
                 <span className="flex items-center gap-1.5">
                   <Star className="h-3.5 w-3.5 fill-accent text-accent" /> {lawyer.rating.toFixed(1)} ({lawyer.review_count} reviews)
                 </span>
-                <span className="flex items-center gap-1.5"><Scale className="h-3.5 w-3.5" /> {Math.round(lawyer.experience_years * 20 + lawyer.review_count * 3)}+ cases</span>
                 <span className="flex items-center gap-1.5"><Timer className="h-3.5 w-3.5" /> Responds in {responseLabel}</span>
               </div>
 
@@ -181,7 +180,10 @@ export default function LawyerProfile() {
                     })
                   }
                 >
-                  <ExternalLink className="h-4 w-4" /> Visit Website
+                  <ExternalLink className="h-4 w-4" /> {lawyer.website_url?.trim() ? "Visit Website" : "Find Online"}
+                </Button>
+                <Button variant="outline" size="lg" className="gap-2 border-white/40 text-white hover:bg-white/15 hover:text-white" asChild>
+                  <Link to="/client/messages">Message</Link>
                 </Button>
                 <Button
                   variant="outline"
@@ -282,7 +284,7 @@ export default function LawyerProfile() {
                   })
                 }
               >
-                <ExternalLink className="h-4 w-4" /> Visit Website
+                <ExternalLink className="h-4 w-4" /> {lawyer.website_url?.trim() ? "Visit Website" : "Find Online"}
               </Button>
               <Button variant="ghost" className="w-full gap-2" onClick={handleSave}>
                 <Heart className={cn("h-4 w-4", saved && "fill-accent text-accent")} />

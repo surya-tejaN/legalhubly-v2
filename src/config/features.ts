@@ -28,6 +28,8 @@ export const features = {
 
   /** Floating guidelines-trained support chatbot */
   supportChat: true,
+  /** Mic + spoken replies in SupportChat (browser Web Speech API) */
+  supportChatVoice: true,
 } as const;
 
 export type FeatureFlag = keyof typeof features;

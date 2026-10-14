@@ -25,9 +25,27 @@ function generateToken(): string {
     .join('')
 }
 
-// Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
+/** Only service_role (or EMAIL_SERVICE_SECRET) may send mail — block anon/user JWTs. */
+function isAuthorizedSender(req: Request, serviceRoleKey: string): boolean {
+  const secret = Deno.env.get('EMAIL_SERVICE_SECRET')?.trim()
+  const headerSecret = req.headers.get('x-email-service-secret')?.trim()
+  if (secret && headerSecret && headerSecret === secret) return true
+
+  const auth = req.headers.get('Authorization') || ''
+  const token = auth.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return false
+  if (token === serviceRoleKey) return true
+
+  // Decode JWT payload (no verify — gateway already checked signature when verify_jwt=true)
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return false
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload?.role === 'service_role'
+  } catch {
+    return false
+  }
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -44,6 +62,16 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: 'Server configuration error' }),
       {
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  if (!isAuthorizedSender(req, supabaseServiceKey)) {
+    return new Response(
+      JSON.stringify({ error: 'Forbidden' }),
+      {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )

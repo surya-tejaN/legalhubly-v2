@@ -18,13 +18,25 @@ export default function ResetPassword() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const hash = window.location.hash;
-    if (hash.includes("type=recovery")) setReady(true);
+    const params = new URLSearchParams(window.location.search);
+    if (hash.includes("type=recovery") || params.get("type") === "recovery") {
+      setReady(true);
+    }
+
+    // PKCE / code exchange often lands with a session before PASSWORD_RECOVERY fires
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) setReady(true);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
