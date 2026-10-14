@@ -39,7 +39,7 @@ const CATEGORIES = [
   { label: "Intellectual Property", practice: "Intellectual Property", icon: Brain, desc: "Patents, trademarks, copyright" },
   { label: "Medical Malpractice", practice: "Medical Malpractice", icon: Stethoscope, desc: "Negligence, surgical errors" },
   { label: "Consumer Protection", practice: "Consumer Protection", icon: ShieldCheck, desc: "Fraud, warranties, recalls" },
-  { label: "Traffic Violations", practice: "Criminal Defense", icon: Car, desc: "Tickets, DUI, license issues" },
+  { label: "Traffic Violations", practice: "Traffic Violations", icon: Car, desc: "Tickets, DUI, license issues" },
   { label: "Landlord / Tenant", practice: "Landlord Tenant", icon: KeyRound, desc: "Eviction, leases, deposits" },
   { label: "Education Law", practice: "Education Law", icon: GraduationCap, desc: "Student rights, IEP, Title IX" },
   { label: "Environmental Law", practice: "Environmental Law", icon: Leaf, desc: "Compliance, pollution, permits" },

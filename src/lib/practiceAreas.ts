@@ -15,6 +15,7 @@ export const PRACTICE_AREAS = [
   "Intellectual Property",
   "Medical Malpractice",
   "Consumer Protection",
+  "Traffic Violations",
   "Landlord Tenant",
   "Education Law",
   "Environmental Law",
@@ -40,7 +41,7 @@ export const CATEGORY_TO_PRACTICE: Record<string, string> = {
   "Intellectual Property": "Intellectual Property",
   "Medical Malpractice": "Medical Malpractice",
   "Consumer Protection": "Consumer Protection",
-  "Traffic Violations": "Criminal Defense",
+  "Traffic Violations": "Traffic Violations",
   "Landlord / Tenant": "Landlord Tenant",
   "Education Law": "Education Law",
   "Environmental Law": "Environmental Law",
@@ -97,7 +98,14 @@ export const KEYWORD_MAP: Record<string, string[]> = {
     "medical malpractice", "surgical error", "hospital negligence", "birth injury",
   ],
   "Consumer Protection": ["fraud", "warranty", "recall", "consumer", "scam"],
-  "Landlord Tenant": ["eviction", "security deposit", "landlord", "tenant", "lease"],
+  "Traffic Violations": [
+    "traffic", "ticket", "speeding", "red light", "license suspension", "dui", "cdl",
+  ],
+  "Landlord Tenant": ["eviction", "security deposit", "landlord", "tenant", "lease", "rlto"],
+  "Education Law": ["iep", "title ix", "school", "student rights", "504"],
+  "Environmental Law": ["epa", "pollution", "environmental", "brownfield", "permit"],
+  "Military Law": ["court-martial", "va benefits", "military", "veteran", "ucmj"],
+  "International Law": ["international", "sanctions", "ofac", "customs", "cross-border", "treaty"],
 };
 
 /** Map free-text issue → DB practice area labels for Smart Match. */
