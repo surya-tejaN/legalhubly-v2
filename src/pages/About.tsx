@@ -19,11 +19,23 @@ export default function About() {
             <strong className="text-foreground">Legalhubly</strong> helps people find the right
             Chicago lawyer faster. Describe your legal issue in plain language, get matched to the
             right practice area, then connect with verified attorneys — view profiles, compare
-            ratings, visit their website, message, or book a consultation.
+            ratings, visit their website, or message them.
           </p>
           <p>
             Simple, fast, and free to start. We currently focus on Chicago, Illinois so every match
             is local and relevant.
+          </p>
+          <p>
+            Follow updates on{" "}
+            <a
+              href="https://www.linkedin.com/company/legalhubly"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline"
+            >
+              LinkedIn
+            </a>
+            .
           </p>
           <ol className="list-decimal pl-5 space-y-2">
             <li>
@@ -47,6 +59,14 @@ export default function About() {
           >
             Find a Chicago lawyer
           </Link>
+          <a
+            href="https://www.linkedin.com/company/legalhubly"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            LinkedIn
+          </a>
           <Link to="/contact" className="text-sm text-muted-foreground hover:underline">
             Contact
           </Link>

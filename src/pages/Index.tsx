@@ -6,14 +6,17 @@ import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { matchPracticeAreas } from "@/lib/practiceAreas";
 import { LAUNCH_CITY_LABEL } from "@/lib/location";
+import { practiceAreaToSlug } from "@/lib/pageMeta";
+import { shareLegalhubly } from "@/lib/shareReferral";
 import Logo from "@/components/Logo";
+import { toast } from "sonner";
 import {
   Shield, ArrowRight, Sparkles, MapPin, Briefcase,
   Menu, X, Star, Clock, BadgeCheck, Search,
   Users, Home, Gavel, Globe, Heart, Building2,
   Landmark, ScrollText, ChevronRight, DollarSign, Brain,
   Stethoscope, ShieldCheck, Car, KeyRound, GraduationCap,
-  Leaf, Swords, Earth, Receipt, Zap,
+  Leaf, Swords, Earth, Receipt, Zap, Share2,
 } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -348,7 +351,7 @@ export default function Index() {
             {CATEGORIES.map((cat, i) => (
               <motion.div key={cat.label} {...fadeUp} {...staggerChild(i)}>
                 <Link
-                  to={`/client/find-lawyers?matched=${encodeURIComponent(cat.practice)}`}
+                  to={`/chicago/${practiceAreaToSlug(cat.practice)}`}
                   className="group flex items-center gap-4 p-6 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover hover:border-accent/20 transition-all duration-300"
                 >
                   <div className="h-12 w-12 rounded-xl bg-accent/8 flex items-center justify-center shrink-0 group-hover:bg-accent/12 group-hover:scale-105 transition-all duration-300">
@@ -408,9 +411,26 @@ export default function Index() {
               <p className="text-primary-foreground/60 text-lg mb-10 max-w-md mx-auto">
                 It's free to search and get matched. Find your attorney in minutes.
               </p>
-              <Button variant="gold" size="lg" onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => inputRef.current?.focus(), 500); }}>
-                Get Started Free <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button variant="gold" size="lg" onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => inputRef.current?.focus(), 500); }}>
+                  Get Started Free <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+                  onClick={async () => {
+                    const result = await shareLegalhubly({
+                      text: "Find the right Chicago lawyer faster on Legalhubly — free to start.",
+                      path: "/",
+                    });
+                    if (result === "copied") toast.success("Link copied — share with friends & family.");
+                    if (result === "failed") toast.error("Could not share right now.");
+                  }}
+                >
+                  <Share2 className="mr-1.5 h-4 w-4" /> Share Legalhubly
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -431,14 +451,31 @@ export default function Index() {
             {[
               { title: "Platform", links: [{ label: "Find a Lawyer", href: "/client/find-lawyers" }, { label: "Practice Areas", href: "#practice-areas" }, { label: "How It Works", href: "#how" }] },
               { title: "Resources", links: [{ label: "About", href: "/about" }, { label: "Contact", href: "/contact" }] },
-              { title: "Company", links: [{ label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }, { label: "Contact", href: "/contact" }] },
+              {
+                title: "Company",
+                links: [
+                  { label: "Privacy Policy", href: "/privacy" },
+                  { label: "Terms of Service", href: "/terms" },
+                  { label: "LinkedIn", href: "https://www.linkedin.com/company/legalhubly", external: true },
+                  { label: "Contact", href: "/contact" },
+                ],
+              },
             ].map((col) => (
               <div key={col.title}>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-foreground mb-4">{col.title}</h4>
                 <ul className="space-y-2.5">
                   {col.links.map((link) => (
                     <li key={link.label}>
-                      {link.href.startsWith("#") ? (
+                      {"external" in link && link.external ? (
+                        <a
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {link.label}
+                        </a>
+                      ) : link.href.startsWith("#") ? (
                         <a href={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{link.label}</a>
                       ) : (
                         <Link to={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{link.label}</Link>
@@ -452,6 +489,14 @@ export default function Index() {
           <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">© 2026 Legalhubly. All rights reserved.</p>
             <div className="flex items-center gap-4">
+              <a
+                href="https://www.linkedin.com/company/legalhubly"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                LinkedIn
+              </a>
               <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
               <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
             </div>

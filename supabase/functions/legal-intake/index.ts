@@ -1,11 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getAiChatEnv } from "../_shared/ai_chat.ts";
+import { guardAiRequest, jsonError } from "../_shared/ai_guard.ts";
+import { logError, logInfo } from "../_shared/log.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const FN = "legal-intake";
 
 const SYSTEM_PROMPT = `You are an AI legal intake assistant for Legalhubly, an AI-powered legal services platform. Your job is to guide clients through describing their legal matter in a warm, professional, and empathetic conversational style.
 
@@ -51,9 +49,10 @@ When you have collected enough information to generate a summary, call the gener
 When calling generate_summary, extract ALL information from the conversation into the structured fields.`;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const gated = await guardAiRequest(req, FN, { maxPerMinute: 15, maxPerDay: 150 });
+  if (gated instanceof Response) return gated;
+
+  const { corsHeaders, requestId, userId, startedAt } = gated;
 
   try {
     const { messages, action } = await req.json();
@@ -153,14 +152,10 @@ serve(async (req) => {
         const errText = await summaryResponse.text();
         console.error("Summary generation failed:", summaryResponse.status, errText);
         if (summaryResponse.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return jsonError(corsHeaders, requestId, 429, "Rate limit exceeded. Please try again shortly.");
         }
         if (summaryResponse.status === 402) {
-          return new Response(JSON.stringify({ error: "AI usage limit reached." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return jsonError(corsHeaders, requestId, 402, "AI usage limit reached.");
         }
         throw new Error(`AI gateway error: ${summaryResponse.status}`);
       }
@@ -170,6 +165,7 @@ serve(async (req) => {
 
       if (toolCall?.function?.arguments) {
         const summary = JSON.parse(toolCall.function.arguments);
+        logInfo({ fn: FN, requestId, userId, event: "request_ok", ms: Date.now() - startedAt, action: "generate_summary" });
         return new Response(JSON.stringify({ summary }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -200,28 +196,32 @@ serve(async (req) => {
 
     if (!response.ok) {
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      logError({ fn: FN, requestId, event: "ai_error", status: response.status, body: t.slice(0, 300) });
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 429, "Rate limit exceeded. Please try again shortly.");
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI usage limit reached." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 402, "AI usage limit reached.");
       }
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
+    logInfo({ fn: FN, requestId, userId, event: "request_ok", ms: Date.now() - startedAt });
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("legal-intake error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    logError({
+      fn: FN,
+      requestId,
+      event: "request_error",
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return jsonError(
+      corsHeaders,
+      requestId,
+      500,
+      e instanceof Error ? e.message : "Unknown error",
     );
   }
 });

@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SupportChat from "@/components/SupportChat";
+import ReferralCapture from "@/components/ReferralCapture";
 import { queryClient } from "@/lib/queryClient";
 import { features } from "@/config/features";
 
@@ -31,6 +32,7 @@ const VerifyEmailSuccess = lazy(() => import("./pages/auth/VerifyEmailSuccess"))
 const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
 const FindLawyers = lazy(() => import("./pages/client/FindLawyers"));
 const LawyerProfile = lazy(() => import("./pages/client/LawyerProfile"));
+const PracticeAreaPage = lazy(() => import("./pages/PracticeAreaPage"));
 const AccountSettings = lazy(() => import("./pages/client/AccountSettings"));
 const SavedLawyers = lazy(() => import("./pages/client/SavedLawyers"));
 const ClientMessages = lazy(() => import("./pages/client/ClientMessages"));
@@ -79,6 +81,7 @@ function AnimatedRoutes() {
 
           <Route path="/client/find-lawyers" element={gated(features.clientFindLawyers, <FindLawyers />)} />
           <Route path="/client/lawyer/:lawyerId" element={gated(features.clientLawyerProfile, <LawyerProfile />)} />
+          <Route path="/chicago/:slug" element={page(<PracticeAreaPage />)} />
 
           <Route
             path="/client/dashboard"
@@ -252,6 +255,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <ReferralCapture />
             <AnimatedRoutes />
             {features.supportChat && <SupportChat />}
           </AuthProvider>

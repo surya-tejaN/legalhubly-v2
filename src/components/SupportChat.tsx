@@ -6,7 +6,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { streamSupportReply, type ChatMessage } from "@/lib/supportChat";
+import {
+  clearSupportSessionId,
+  loadSupportHistory,
+  streamSupportReply,
+  type ChatMessage,
+} from "@/lib/supportChat";
 import { fileToChatDataUrl } from "@/lib/chatImage";
 import {
   getSpeechRecognitionCtor,
@@ -21,13 +26,13 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "I’m your Legalhubly Match Coach for Chicago. Simple, fast, and free to start:\n\n1) Describe your issue in plain language\n2) I’ll map the practice area and point you to top matches\n3) Connect — profiles, ratings, website, book, or message\n\nTell me what happened (or pick a quick start below). I can’t give legal advice.";
+  "I’m your Legalhubly Match Coach for Chicago. Simple, fast, and free to start:\n\n1) Describe your issue in plain language\n2) I’ll map the practice area and point you to top matches\n3) Connect — profiles, ratings, website, or message\n\nOnline booking is coming soon. Tell me what happened (or pick a quick start below). I can’t give legal advice.";
 
 const QUICK_STARTS = [
   { label: "Describe my issue", prompt: "I need help finding a Chicago lawyer. Here’s my situation: " },
   { label: "How matching works", prompt: "Explain how Legalhubly matches me to a lawyer in three steps." },
   { label: "Find lawyers now", prompt: "Take me to Find Lawyers for Chicago and tell me how to filter by practice area." },
-  { label: "Book a consultation", prompt: "How do I book a consultation with a Chicago lawyer on Legalhubly?" },
+  { label: "Visit a lawyer site", prompt: "How do I visit a Chicago lawyer’s website or message them on Legalhubly?" },
 ];
 
 export default function SupportChat() {
@@ -95,6 +100,20 @@ export default function SupportChat() {
       setSpeaking(false);
     }
   }, [open]);
+
+  // Resume persisted Match Coach session (production pattern)
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    (async () => {
+      const history = await loadSupportHistory();
+      if (cancelled || history.length === 0) return;
+      setMessages([{ role: "assistant", content: WELCOME }, ...history]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user?.id]);
 
   const stopListening = () => {
     recognitionRef.current?.stop();
@@ -279,6 +298,20 @@ export default function SupportChat() {
               <p className="text-[10px] text-muted-foreground">Describe → Match → Connect · Chicago</p>
             </div>
             <div className="flex items-center gap-0.5">
+              {user && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearSupportSessionId();
+                    setMessages([{ role: "assistant", content: WELCOME }]);
+                    setError("");
+                  }}
+                  className="px-2 py-1 text-[10px] rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="Start a new chat"
+                >
+                  New
+                </button>
+              )}
               {canListen && (
                 <button
                   type="button"

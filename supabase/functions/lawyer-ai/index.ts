@@ -1,12 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAiChatEnv } from "../_shared/ai_chat.ts";
+import { guardAiRequest, jsonError, resolveLawyerIdForUser } from "../_shared/ai_guard.ts";
+import { logError, logInfo } from "../_shared/log.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const FN = "lawyer-ai";
 
 const SYSTEM_PROMPT = `You are the AI Legal Productivity Agent for Legalhubly — a multi-capability assistant for attorneys. You handle several modes based on the "agent_mode" specified.
 
@@ -50,35 +47,49 @@ Generate professional case status updates for clients.
 - Mark inferred information as [AI inference]`;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const gated = await guardAiRequest(req, FN, { maxPerMinute: 20, maxPerDay: 200 });
+  if (gated instanceof Response) return gated;
+
+  const { corsHeaders, requestId, userId, serviceClient, startedAt } = gated;
 
   try {
+    const lawyerId = await resolveLawyerIdForUser(serviceClient, userId);
+    if (!lawyerId) {
+      return jsonError(corsHeaders, requestId, 403, "Lawyer profile required.");
+    }
+
     const { messages, agent_mode, case_context, matter_id } = await req.json();
     const { apiKey: AI_API_KEY, url: AI_CHAT_URL, model: AI_MODEL } = getAiChatEnv();
 
     const mode = agent_mode || "chat";
-    let contextMessages: any[] = [];
+    const contextMessages: Array<{ role: string; content: string }> = [];
 
-    // If matter_id provided, fetch case context from DB
     if (matter_id && !case_context) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: matter } = await serviceClient
+        .from("matters")
+        .select("*")
+        .eq("id", matter_id)
+        .eq("lawyer_id", lawyerId)
+        .maybeSingle();
 
-      const [matterRes, tasksRes, notesRes] = await Promise.all([
-        supabase.from("matters").select("*").eq("id", matter_id).single(),
-        supabase.from("tasks").select("*").eq("matter_id", matter_id),
-        supabase.from("internal_notes").select("*").eq("matter_id", matter_id).order("created_at", { ascending: false }).limit(5),
+      if (!matter) {
+        return jsonError(corsHeaders, requestId, 404, "Matter not found.");
+      }
+
+      const [tasksRes, notesRes] = await Promise.all([
+        serviceClient.from("tasks").select("*").eq("matter_id", matter_id),
+        serviceClient
+          .from("internal_notes")
+          .select("*")
+          .eq("matter_id", matter_id)
+          .order("created_at", { ascending: false })
+          .limit(5),
       ]);
 
-      if (matterRes.data) {
-        contextMessages.push({
-          role: "user",
-          content: `Case context:\n${JSON.stringify(matterRes.data, null, 2)}\n\nTasks:\n${JSON.stringify(tasksRes.data || [], null, 2)}\n\nRecent notes:\n${JSON.stringify(notesRes.data || [], null, 2)}`,
-        });
-      }
+      contextMessages.push({
+        role: "user",
+        content: `Case context:\n${JSON.stringify(matter, null, 2)}\n\nTasks:\n${JSON.stringify(tasksRes.data || [], null, 2)}\n\nRecent notes:\n${JSON.stringify(notesRes.data || [], null, 2)}`,
+      });
     } else if (case_context) {
       contextMessages.push({
         role: "user",
@@ -86,34 +97,31 @@ serve(async (req) => {
       });
     }
 
-    // Add mode-specific instructions
     if (mode === "case_summary") {
       contextMessages.push({
         role: "user",
-        content: "Generate a comprehensive attorney-ready case summary from the context above. Include: Overview, Key Facts (with source tags), Legal Issues, Risk Assessment, and Recommended Next Steps.",
+        content:
+          "Generate a comprehensive attorney-ready case summary from the context above. Include: Overview, Key Facts (with source tags), Legal Issues, Risk Assessment, and Recommended Next Steps.",
       });
     } else if (mode === "suggest_tasks") {
       contextMessages.push({
         role: "user",
-        content: "Based on the case context, suggest 5-8 prioritized tasks with estimated deadlines. Format each as: Priority (High/Medium/Low) | Task | Deadline | Notes.",
+        content:
+          "Based on the case context, suggest 5-8 prioritized tasks with estimated deadlines. Format each as: Priority (High/Medium/Low) | Task | Deadline | Notes.",
       });
     } else if (mode === "suggest_reply") {
       contextMessages.push({
         role: "user",
-        content: "Draft a professional reply to the client based on the case context and conversation. Be empathetic but factual.",
+        content:
+          "Draft a professional reply to the client based on the case context and conversation. Be empathetic but factual.",
       });
     } else if (mode === "case_update") {
       contextMessages.push({
         role: "user",
-        content: "Generate a client-friendly case status update. Summarize recent activity, explain next steps in plain language, and set timeline expectations.",
+        content:
+          "Generate a client-friendly case status update. Summarize recent activity, explain next steps in plain language, and set timeline expectations.",
       });
     }
-
-    const allMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...contextMessages,
-      ...(messages || []),
-    ];
 
     const response = await fetch(AI_CHAT_URL, {
       method: "POST",
@@ -123,35 +131,43 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: AI_MODEL,
-        messages: allMessages,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...contextMessages,
+          ...(messages || []),
+        ],
         stream: true,
       }),
     });
 
     if (!response.ok) {
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      logError({ fn: FN, requestId, event: "ai_error", status: response.status, body: t.slice(0, 300) });
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 429, "Rate limit exceeded. Please try again shortly.");
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI usage limit reached." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 402, "AI usage limit reached.");
       }
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
+    logInfo({ fn: FN, requestId, userId, event: "request_ok", ms: Date.now() - startedAt, mode });
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("lawyer-ai error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    logError({
+      fn: FN,
+      requestId,
+      event: "request_error",
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return jsonError(
+      corsHeaders,
+      requestId,
+      500,
+      e instanceof Error ? e.message : "Unknown error",
     );
   }
 });

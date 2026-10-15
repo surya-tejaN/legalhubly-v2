@@ -1,11 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getAiChatEnv } from "../_shared/ai_chat.ts";
+import { guardAiRequest, jsonError } from "../_shared/ai_guard.ts";
+import { logError, logInfo } from "../_shared/log.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const FN = "document-agent";
 
 const SYSTEM_PROMPT = `You are the Document Drafting Agent for Legalhubly. You generate professional legal documents based on case context and attorney instructions.
 
@@ -41,16 +39,17 @@ When referencing case details, note where the information came from:
 - "[Attorney input]" for instructions provided by the lawyer`;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const gated = await guardAiRequest(req, FN, { maxPerMinute: 10, maxPerDay: 80 });
+  if (gated instanceof Response) return gated;
+
+  const { corsHeaders, requestId, userId, startedAt } = gated;
 
   try {
     const { messages, document_type, case_context, instructions } = await req.json();
     const { apiKey: AI_API_KEY, url: AI_CHAT_URL, model: AI_MODEL } = getAiChatEnv();
 
-    const contextMessages = [];
-    
+    const contextMessages: Array<{ role: string; content: string }> = [];
+
     if (case_context) {
       contextMessages.push({
         role: "user",
@@ -65,12 +64,6 @@ serve(async (req) => {
       });
     }
 
-    const allMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...contextMessages,
-      ...(messages || []),
-    ];
-
     const response = await fetch(AI_CHAT_URL, {
       method: "POST",
       headers: {
@@ -79,35 +72,43 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: AI_MODEL,
-        messages: allMessages,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...contextMessages,
+          ...(messages || []),
+        ],
         stream: true,
       }),
     });
 
     if (!response.ok) {
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      logError({ fn: FN, requestId, event: "ai_error", status: response.status, body: t.slice(0, 300) });
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 429, "Rate limit exceeded. Please try again shortly.");
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI usage limit reached." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 402, "AI usage limit reached.");
       }
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
+    logInfo({ fn: FN, requestId, userId, event: "request_ok", ms: Date.now() - startedAt });
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("document-agent error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    logError({
+      fn: FN,
+      requestId,
+      event: "request_error",
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return jsonError(
+      corsHeaders,
+      requestId,
+      500,
+      e instanceof Error ? e.message : "Unknown error",
     );
   }
 });

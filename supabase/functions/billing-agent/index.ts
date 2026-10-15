@@ -1,43 +1,51 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAiChatEnv } from "../_shared/ai_chat.ts";
+import { guardAiRequest, jsonError, resolveLawyerIdForUser } from "../_shared/ai_guard.ts";
+import { logError, logInfo } from "../_shared/log.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const FN = "billing-agent";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const gated = await guardAiRequest(req, FN, { maxPerMinute: 10, maxPerDay: 80 });
+  if (gated instanceof Response) return gated;
+
+  const { corsHeaders, requestId, userId, serviceClient, startedAt } = gated;
 
   try {
+    const lawyerId = await resolveLawyerIdForUser(serviceClient, userId);
+    if (!lawyerId) {
+      return jsonError(corsHeaders, requestId, 403, "Lawyer profile required.");
+    }
+
     const { action, matter_id, time_entries, client_name, payments } = await req.json();
     const { apiKey: AI_API_KEY, url: AI_CHAT_URL, model: AI_MODEL } = getAiChatEnv();
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     let prompt = "";
 
     if (action === "generate_invoice") {
-      // Fetch time entries and matter details
       let entries = time_entries;
-      if (!entries && matter_id) {
-        const { data } = await supabase
-          .from("time_entries")
-          .select("*")
-          .eq("matter_id", matter_id)
-          .eq("billable", true);
-        entries = data || [];
-      }
+      let matter: Record<string, unknown> | null = null;
 
-      const { data: matter } = matter_id
-        ? await supabase.from("matters").select("*").eq("id", matter_id).single()
-        : { data: null };
+      if (matter_id) {
+        const { data: m } = await serviceClient
+          .from("matters")
+          .select("*")
+          .eq("id", matter_id)
+          .eq("lawyer_id", lawyerId)
+          .maybeSingle();
+        if (!m) {
+          return jsonError(corsHeaders, requestId, 404, "Matter not found.");
+        }
+        matter = m;
+        if (!entries) {
+          const { data } = await serviceClient
+            .from("time_entries")
+            .select("*")
+            .eq("matter_id", matter_id)
+            .eq("billable", true);
+          entries = data || [];
+        }
+      }
 
       prompt = `Generate a professional legal invoice with the following details:
 
@@ -46,36 +54,27 @@ Matter: ${matter?.title || "[Matter Title]"} (${matter?.case_number || ""})
 Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
 
 Time Entries:
-${(entries || []).map((e: any) => `- ${e.description}: ${e.hours}h @ $${e.rate}/hr = $${(e.hours * e.rate).toFixed(2)} (${e.date})`).join("\n")}
+${(entries || []).map((e: { description: string; hours: number; rate: number; date: string }) =>
+  `- ${e.description}: ${e.hours}h @ $${e.rate}/hr = $${(e.hours * e.rate).toFixed(2)} (${e.date})`
+).join("\n")}
 
-Total Hours: ${(entries || []).reduce((sum: number, e: any) => sum + e.hours, 0)}
-Total Amount: $${(entries || []).reduce((sum: number, e: any) => sum + (e.hours * e.rate), 0).toFixed(2)}
+Total Hours: ${(entries || []).reduce((sum: number, e: { hours: number }) => sum + e.hours, 0)}
+Total Amount: $${(entries || []).reduce((sum: number, e: { hours: number; rate: number }) => sum + (e.hours * e.rate), 0).toFixed(2)}
 
-Format as a clean, professional invoice with:
-- Invoice number, date, and due date (Net 30)
-- Itemized time entries
-- Subtotal, any applicable fees, and total
-- Payment instructions section
-- Professional closing
-
-⚠️ Include at the bottom: "This invoice was generated with AI assistance. Please verify all entries and amounts before sending to the client."`;
+Format as a clean, professional invoice with Net 30, itemized entries, and payment instructions.
+⚠️ Include: "This invoice was generated with AI assistance. Please verify all entries before sending."`;
     } else if (action === "payment_reminder") {
       prompt = `Generate a professional but friendly payment reminder email for:
 
 Client: ${client_name || "[Client Name]"}
 Outstanding payments:
-${(payments || []).map((p: any) => `- $${p.amount} (${p.description || "Legal services"}) — Due: ${p.due_date || "Upon receipt"}`).join("\n")}
+${(payments || []).map((p: { amount: number; description?: string; due_date?: string }) =>
+  `- $${p.amount} (${p.description || "Legal services"}) — Due: ${p.due_date || "Upon receipt"}`
+).join("\n")}
 
-Total Outstanding: $${(payments || []).reduce((sum: number, p: any) => sum + p.amount, 0).toFixed(2)}
+Total Outstanding: $${(payments || []).reduce((sum: number, p: { amount: number }) => sum + p.amount, 0).toFixed(2)}
 
-Write a polite, professional reminder that:
-- Acknowledges they may have already sent payment
-- Lists the outstanding items
-- Provides payment instructions
-- Offers to discuss payment plans if needed
-- Maintains the professional relationship
-
-⚠️ Include at the bottom: "This reminder was drafted with AI assistance. Please review before sending."`;
+Write a polite reminder. Include AI-assistance disclaimer.`;
     } else if (action === "consultation_receipt") {
       prompt = `Generate a consultation payment receipt/confirmation for:
 
@@ -86,9 +85,12 @@ Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long",
 
 Include confirmation details, what to expect next, and a thank you message.`;
     } else {
-      return new Response(JSON.stringify({ error: "Unknown action. Use: generate_invoice, payment_reminder, or consultation_receipt" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(
+        corsHeaders,
+        requestId,
+        400,
+        "Unknown action. Use: generate_invoice, payment_reminder, or consultation_receipt",
+      );
     }
 
     const response = await fetch(AI_CHAT_URL, {
@@ -102,7 +104,8 @@ Include confirmation details, what to expect next, and a thank you message.`;
         messages: [
           {
             role: "system",
-            content: "You are a billing assistant for a law firm. Generate clean, professional financial documents. Always use proper formatting with headers and sections. Include appropriate disclaimers about AI-generated content.",
+            content:
+              "You are a billing assistant for a law firm. Generate clean, professional financial documents. Always include AI-generated content disclaimers.",
           },
           { role: "user", content: prompt },
         ],
@@ -112,28 +115,32 @@ Include confirmation details, what to expect next, and a thank you message.`;
 
     if (!response.ok) {
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      logError({ fn: FN, requestId, event: "ai_error", status: response.status, body: t.slice(0, 300) });
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 429, "Rate limit exceeded.");
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI usage limit reached." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(corsHeaders, requestId, 402, "AI usage limit reached.");
       }
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
+    logInfo({ fn: FN, requestId, userId, event: "request_ok", ms: Date.now() - startedAt, action });
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("billing-agent error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    logError({
+      fn: FN,
+      requestId,
+      event: "request_error",
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return jsonError(
+      corsHeaders,
+      requestId,
+      500,
+      e instanceof Error ? e.message : "Unknown error",
     );
   }
 });

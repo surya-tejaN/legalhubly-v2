@@ -11,6 +11,8 @@ project_id = "ubljuduaxtdojaaggqpw"
     verify_jwt = true
   [functions.create-portal-session]
     verify_jwt = true
+  [functions.delete-account]
+    verify_jwt = true
   [functions.document-agent]
     verify_jwt = true
   [functions.follow-up-agent]

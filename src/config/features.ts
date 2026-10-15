@@ -14,6 +14,8 @@ export const features = {
   clientConsultations: true,
   clientDocuments: true,
   clientPayments: true,
+  /** Real calendar booking — OFF until live slots exist (no synthetic times). */
+  clientBooking: false,
 
   lawyerDashboard: true,
   lawyerClients: true,

@@ -150,13 +150,22 @@ export default function Signup() {
     setSubmitting(true);
     otpFlowRef.current = true;
 
+    const { getStoredReferral } = await import("@/lib/shareReferral");
+    const { ref: referralCode, source: referralSource } = getStoredReferral();
+
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: trimmedEmail,
       password,
       options: {
         // OTP is the verification path — avoid relying on magic-link redirect
         emailRedirectTo: `${window.location.origin}/login`,
-        data: { full_name: trimmedName, role, city: LAUNCH_CITY },
+        data: {
+          full_name: trimmedName,
+          role,
+          city: LAUNCH_CITY,
+          ...(referralCode ? { referral_code: referralCode } : {}),
+          ...(referralSource ? { referral_source: referralSource } : {}),
+        },
       },
     });
 

@@ -15,6 +15,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { openLawyerWebsite, resolveLawyerWebsiteHref } from "@/lib/lawyerWebsite";
 import BookConsultationDialog, { type BookableLawyer } from "@/components/BookConsultationDialog";
 import Logo from "@/components/Logo";
+import { rankLawyers } from "@/lib/lawyerRanking";
+import { isFeatureEnabled } from "@/config/features";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -39,11 +41,14 @@ interface Lawyer {
   hourly_rate: number | null;
   consultation_fee: number | null;
   next_available_date: string | null;
+  match_score?: number;
+  why_match?: string[];
 }
 
-type SortKey = "rating" | "review_count" | "experience";
+type SortKey = "best_match" | "rating" | "review_count" | "experience";
 
 const SORT_OPTIONS: { value: SortKey; label: string; icon: typeof Star }[] = [
+  { value: "best_match", label: "Best Match", icon: Sparkles },
   { value: "rating", label: "Top Rated", icon: Star },
   { value: "experience", label: "Most Experienced", icon: Briefcase },
   { value: "review_count", label: "Most Reviewed", icon: Award },
@@ -70,7 +75,8 @@ function LawyerCard({
     name: lawyer.name,
     firm: lawyer.firm,
   });
-  const bookable = lawyer.availability_status !== "unavailable";
+  const bookingEnabled = isFeatureEnabled("clientBooking");
+  const bookable = bookingEnabled && lawyer.availability_status !== "unavailable";
 
   return (
     <motion.div
@@ -96,6 +102,12 @@ function LawyerCard({
           {/* Info */}
           <div className="flex-1 min-w-0 space-y-2.5">
             <div>
+              {lawyer.why_match && lawyer.why_match.length > 0 && (
+                <p className="text-[11px] text-accent font-medium mb-1">
+                  Why this match: {lawyer.why_match.join(" · ")}
+                  {typeof lawyer.match_score === "number" ? ` · Score ${lawyer.match_score}` : ""}
+                </p>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
                 <Link to={`/client/lawyer/${lawyer.id}`} className="text-lg font-semibold text-foreground hover:text-accent transition-colors">
                   {lawyer.name}
@@ -173,26 +185,40 @@ function LawyerCard({
             >
               {isDirectSite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 text-xs w-full sm:w-auto"
-              disabled={!bookable}
-              title={
-                bookable
-                  ? "Book a consultation"
-                  : "Not available to book right now — check back later"
-              }
-              onClick={() => onBook(lawyer)}
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              {bookable
-                ? lawyer.availability_status === "busy"
-                  ? "Book later"
-                  : "Book consult"
-                : "Unavailable"}
-            </Button>
+            {bookingEnabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 text-xs w-full sm:w-auto"
+                disabled={!bookable}
+                title={
+                  bookable
+                    ? "Book a consultation"
+                    : "Not available to book right now — check back later"
+                }
+                onClick={() => onBook(lawyer)}
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                {bookable
+                  ? lawyer.availability_status === "busy"
+                    ? "Book later"
+                    : "Book consult"
+                  : "Unavailable"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 text-xs w-full sm:w-auto"
+                disabled
+                title="Online booking coming soon — use Visit Website or Message"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Booking soon
+              </Button>
+            )}
             <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>
             </Button>
@@ -211,14 +237,21 @@ export default function FindLawyers() {
   const [searchParams] = useSearchParams();
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortKey>("rating");
+  const urlSort = searchParams.get("sort");
+  const initialSort: SortKey =
+    urlSort === "best_match" || urlSort === "rating" || urlSort === "experience" || urlSort === "review_count"
+      ? urlSort
+      : searchParams.get("matched") || searchParams.get("practice") || searchParams.get("q")
+        ? "best_match"
+        : "rating";
+  const [sortBy, setSortBy] = useState<SortKey>(initialSort);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [searchInput, setSearchInput] = useState("");
   const [bookLawyer, setBookLawyer] = useState<BookableLawyer | null>(null);
 
   const urlQuery = searchParams.get("q") || "";
-  const urlMatched = searchParams.get("matched") || "";
-  const matchedCategories = urlMatched ? urlMatched.split(",") : [];
+  const urlMatched = searchParams.get("matched") || searchParams.get("practice") || "";
+  const matchedCategories = urlMatched ? urlMatched.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
   // Load saved lawyer IDs
   useEffect(() => {
@@ -306,6 +339,12 @@ export default function FindLawyers() {
   }, [lawyers, searchInput]);
 
   const sorted = useMemo(() => {
+    if (sortBy === "best_match") {
+      return rankLawyers(filtered, {
+        practiceArea: matchedCategories[0],
+        query: urlQuery || searchInput,
+      });
+    }
     const arr = [...filtered];
     switch (sortBy) {
       case "rating": arr.sort((a, b) => b.rating - a.rating); break;
@@ -313,7 +352,7 @@ export default function FindLawyers() {
       case "experience": arr.sort((a, b) => b.experience_years - a.experience_years); break;
     }
     return arr;
-  }, [filtered, sortBy]);
+  }, [filtered, sortBy, matchedCategories, urlQuery, searchInput]);
 
   const pageTitle = matchedCategories.length === 1
     ? `${matchedCategories[0]} Lawyers`

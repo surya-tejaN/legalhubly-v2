@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { guardAiRequest, jsonError } from "../_shared/ai_guard.ts";
+import { logError, logInfo } from "../_shared/log.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const FN = "match-lawyers";
 
 // ─── Category-to-practice mapping ────────────────────────────────────────────
 const CATEGORY_TO_PRACTICE: Record<string, string[]> = {
@@ -173,9 +170,14 @@ function formatHours(hours: number): string {
 
 // ─── Server ──────────────────────────────────────────────────────────────────
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const gated = await guardAiRequest(req, FN, {
+    rateLimit: true,
+    maxPerMinute: 30,
+    maxPerDay: 300,
+  });
+  if (gated instanceof Response) return gated;
+
+  const { corsHeaders, requestId, userId, serviceClient, startedAt } = gated;
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -183,12 +185,8 @@ serve(async (req) => {
     const sort_by = body.sort_by || "best_match";
     const filters = body.filters || {};
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Build query with filters
-    let query = supabase.from("lawyers").select("*");
+    // Chicago-only public catalog (no cross-tenant private data)
+    let query = serviceClient.from("lawyers").select("*").eq("city", "Chicago");
 
     if (filters.practice_area && filters.practice_area !== "All") {
       query = query.contains("practice_areas", [filters.practice_area]);
@@ -212,7 +210,6 @@ serve(async (req) => {
     const { data: lawyers, error } = await query;
     if (error) throw error;
 
-    // Empty dataset → return early with empty flag
     if (!lawyers || lawyers.length === 0) {
       return new Response(
         JSON.stringify({ lawyers: [], empty: true, message: "No lawyers available yet in this location." }),
@@ -220,7 +217,6 @@ serve(async (req) => {
       );
     }
 
-    // Score & annotate
     const scored = lawyers.map((lawyer) => {
       const { score, breakdown, is_top_match } = computeMatchScore(lawyer, criteria);
       return {
@@ -234,7 +230,6 @@ serve(async (req) => {
       };
     });
 
-    // Sort
     scored.sort((a, b) => {
       switch (sort_by) {
         case "fastest_response":
@@ -245,19 +240,29 @@ serve(async (req) => {
           return safeNum(b.experience_years) - safeNum(a.experience_years);
         case "highest_rated":
           return safeNum(b.rating) - safeNum(a.rating);
-        default: // best_match
+        default:
           return b.match_score - a.match_score;
       }
     });
 
+    logInfo({ fn: FN, requestId, userId, event: "request_ok", ms: Date.now() - startedAt, count: scored.length });
     return new Response(
       JSON.stringify({ lawyers: scored, empty: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("match-lawyers error:", e);
+    logError({
+      fn: FN,
+      requestId,
+      event: "request_error",
+      error: e instanceof Error ? e.message : String(e),
+    });
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error", lawyers: [], empty: true }),
+      JSON.stringify({
+        error: e instanceof Error ? e.message : "Unknown error",
+        lawyers: [],
+        empty: true,
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

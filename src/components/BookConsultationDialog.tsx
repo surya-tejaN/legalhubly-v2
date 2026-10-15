@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { isFeatureEnabled } from "@/config/features";
 
 export type BookableLawyer = {
   id: string;
@@ -94,15 +95,18 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
   const [type, setType] = useState("video");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const bookingEnabled = isFeatureEnabled("clientBooking");
 
   const slots = useMemo(
-    () => (lawyer ? buildSlots(lawyer.availability_status || "available") : []),
-    [lawyer],
+    () => (lawyer && bookingEnabled ? buildSlots(lawyer.availability_status || "available") : []),
+    [lawyer, bookingEnabled],
   );
   const avail = lawyer
     ? availabilityLabel(lawyer.availability_status, lawyer.next_available_date)
     : null;
-  const canBook = Boolean(lawyer && slots.length > 0 && lawyer.availability_status !== "unavailable");
+  const canBook = Boolean(
+    bookingEnabled && lawyer && slots.length > 0 && lawyer.availability_status !== "unavailable",
+  );
 
   const reset = () => {
     setSlot("");
@@ -113,11 +117,24 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
   };
 
   const handleOpenChange = (v: boolean) => {
+    if (!bookingEnabled) {
+      onOpenChange(false);
+      return;
+    }
     if (!v) reset();
     onOpenChange(v);
   };
 
+  // Booking is a future feature — never show synthetic slots publicly
+  if (!bookingEnabled) {
+    return null;
+  }
+
   const submit = async () => {
+    if (!bookingEnabled) {
+      toast.error("Online booking is coming soon.");
+      return;
+    }
     if (!lawyer || !user) {
       toast.error("Please sign in to book a consultation.");
       return;
@@ -150,6 +167,10 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
 
     setSubmitting(false);
     if (error) {
+      if (error.code === "23505") {
+        toast.error("That time slot was just taken. Pick another time.");
+        return;
+      }
       toast.error(error.message || "Could not book consultation.");
       return;
     }
