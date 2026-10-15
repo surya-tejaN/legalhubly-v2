@@ -35,6 +35,12 @@ export const features = {
   supportChat: true,
   /** Mic + spoken replies in SupportChat (browser Web Speech API) */
   supportChatVoice: true,
+
+  /**
+   * Google / Apple buttons on Login + Signup.
+   * Keep false until providers are enabled in Supabase Auth.
+   */
+  authGoogleApple: false,
 } as const;
 
 export type FeatureFlag = keyof typeof features;

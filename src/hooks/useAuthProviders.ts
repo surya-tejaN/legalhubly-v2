@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isFeatureEnabled } from "@/config/features";
 
 export type AuthProviders = {
   google: boolean;
@@ -8,13 +9,14 @@ export type AuthProviders = {
 };
 
 /**
- * Always expose Google/Apple in the UI (best conversion).
- * Real enablement is checked when the user clicks (Supabase returns a clear error if off).
+ * OAuth buttons follow `features.authGoogleApple` (off until Supabase providers are wired).
+ * Email is always available unless Auth settings disable it.
  */
 export function useAuthProviders(): AuthProviders {
+  const oauthOn = isFeatureEnabled("authGoogleApple");
   const [state, setState] = useState<AuthProviders>({
-    google: true,
-    apple: true,
+    google: oauthOn,
+    apple: oauthOn,
     email: true,
     loading: false,
   });
@@ -36,6 +38,8 @@ export function useAuthProviders(): AuthProviders {
         if (!active) return;
         setState((s) => ({
           ...s,
+          google: oauthOn,
+          apple: oauthOn,
           email: data.external?.email !== false,
           loading: false,
         }));
@@ -46,7 +50,7 @@ export function useAuthProviders(): AuthProviders {
     return () => {
       active = false;
     };
-  }, []);
+  }, [oauthOn]);
 
   return state;
 }
