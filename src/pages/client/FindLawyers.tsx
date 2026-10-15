@@ -297,16 +297,25 @@ export default function FindLawyers() {
         );
       }
 
-      if (urlQuery.trim()) {
+      // Smart Match passes a full sentence in `q` + practice in `matched`.
+      // Only text-filter by `q` when there is NO practice match — otherwise
+      // "i got into an accident…" would wipe every Personal Injury lawyer.
+      if (urlQuery.trim() && matchedCategories.length === 0) {
         const q = urlQuery.toLowerCase();
-        results = results.filter(
-          (l) =>
-            l.name.toLowerCase().includes(q) ||
-            l.firm.toLowerCase().includes(q) ||
-            (l.practice_areas || []).some((pa) => pa.toLowerCase().includes(q)) ||
-            (l.short_description || "").toLowerCase().includes(q) ||
-            (l.bio || "").toLowerCase().includes(q),
-        );
+        const tokens = q.split(/\s+/).filter((t) => t.length > 2);
+        results = results.filter((l) => {
+          const hay = [
+            l.name,
+            l.firm,
+            ...(l.practice_areas || []),
+            l.short_description || "",
+            l.bio || "",
+          ]
+            .join(" ")
+            .toLowerCase();
+          if (hay.includes(q)) return true;
+          return tokens.some((t) => hay.includes(t));
+        });
       }
 
       setLawyers(results);

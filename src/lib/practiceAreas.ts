@@ -63,8 +63,9 @@ export const KEYWORD_MAP: Record<string, string[]> = {
     "theft", "assault", "bail", "traffic", "ticket",
   ],
   "Personal Injury": [
-    "injury", "accident", "slip", "fall", "car accident", "negligence", "hurt",
-    "damaged", "malpractice",
+    "injury", "injur", "accident", "accidnet", "acident", "accidents", "slip", "fall",
+    "car accident", "car crash", "crash", "wreck", "collision", "negligence", "hurt",
+    "damaged", "rear-ended", "whiplash", "hit by",
   ],
   "Employment Law": [
     "fired", "wrongful termination", "discrimination", "harassment", "employment",
@@ -108,6 +109,30 @@ export const KEYWORD_MAP: Record<string, string[]> = {
   "International Law": ["international", "sanctions", "ofac", "customs", "cross-border", "treaty"],
 };
 
+/** Prefer more specific areas when several keywords fire. */
+const AREA_PRIORITY = [
+  "Personal Injury",
+  "Medical Malpractice",
+  "Immigration Law",
+  "Family Law",
+  "Criminal Defense",
+  "Landlord Tenant",
+  "Employment Law",
+  "Traffic Violations",
+  "Bankruptcy",
+  "Estate Planning",
+  "Real Estate Law",
+  "Business Law",
+  "Tax Law",
+  "Intellectual Property",
+  "Consumer Protection",
+  "Education Law",
+  "Environmental Law",
+  "Military Law",
+  "International Law",
+  "Civil Litigation",
+];
+
 /** Map free-text issue → DB practice area labels for Smart Match. */
 export function matchPracticeAreas(input: string): string[] {
   const lower = input.toLowerCase();
@@ -117,7 +142,15 @@ export function matchPracticeAreas(input: string): string[] {
       matches.push(area);
     }
   }
-  return matches;
+  // Typo-friendly PI signal even if keyword list missed it
+  if (!matches.includes("Personal Injury") && /\baccid/.test(lower)) {
+    matches.unshift("Personal Injury");
+  }
+  return matches.sort((a, b) => {
+    const ia = AREA_PRIORITY.indexOf(a);
+    const ib = AREA_PRIORITY.indexOf(b);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
 }
 
 export function categoryLabelToPractice(label: string): string {

@@ -133,8 +133,10 @@ export default function Index() {
     const matched = matchPracticeAreas(trimmed);
     const params = new URLSearchParams();
     params.set("q", trimmed);
+    params.set("sort", "best_match");
     if (matched.length > 0) {
-      params.set("matched", matched.join(","));
+      // Prefer a single primary area so directory filter stays clean
+      params.set("matched", matched[0]);
     }
     navigate(`/client/find-lawyers?${params.toString()}`);
   };
@@ -299,9 +301,10 @@ export default function Index() {
                   )}
                 </div>
                 <Button
+                  type="button"
                   variant="gold"
                   size="lg"
-                  onClick={handleSmartMatch}
+                  onClick={() => handleSmartMatch()}
                   className="shrink-0 px-6 gap-2"
                 >
                   <Zap className="h-4 w-4" />
