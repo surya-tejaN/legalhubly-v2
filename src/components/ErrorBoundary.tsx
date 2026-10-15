@@ -22,6 +22,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleReload = () => {
+    window.location.reload();
+  };
+
+  private handleHome = () => {
     window.location.assign("/");
   };
 
@@ -33,12 +37,19 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="max-w-md text-center space-y-4">
           <h1 className="font-serif text-2xl font-bold text-foreground">Something went wrong</h1>
           <p className="text-sm text-muted-foreground">
-            Legalhubly hit an unexpected error. Your data is safe — try reloading the app.
+            Legalhubly hit an unexpected error. Your data is safe — try reloading this page.
           </p>
-          {import.meta.env.DEV && (
-            <p className="text-xs text-destructive break-words">{this.state.message}</p>
+          {(import.meta.env.DEV || this.state.message) && (
+            <p className="text-xs text-muted-foreground break-words border rounded-lg p-2 bg-muted/40">
+              {this.state.message || "Unknown error"}
+            </p>
           )}
-          <Button onClick={this.handleReload}>Go to home</Button>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button onClick={this.handleReload}>Reload page</Button>
+            <Button variant="outline" onClick={this.handleHome}>
+              Go to home
+            </Button>
+          </div>
         </div>
       </div>
     );

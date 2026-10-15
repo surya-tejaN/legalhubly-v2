@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { MapPin } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,17 +19,12 @@ type Props = {
 
 /** Launch market: Chicago only (other cities removed until expansion). */
 export default function CitySelect({
-  value,
+  value: _value,
   onChange,
   required,
   id = "city",
   label = "City",
 }: Props) {
-  useEffect(() => {
-    if (value !== LAUNCH_CITY) onChange(LAUNCH_CITY);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- force launch city once on mount/mismatch
-  }, [value]);
-
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>
@@ -39,7 +33,10 @@ export default function CitySelect({
       </Label>
       <div className="relative">
         <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
-        <Select value={LAUNCH_CITY} onValueChange={onChange} required={required}>
+        <Select
+          value={LAUNCH_CITY}
+          onValueChange={(v) => onChange(v || LAUNCH_CITY)}
+        >
           <SelectTrigger id={id} className="pl-10 h-11">
             <SelectValue placeholder={LAUNCH_CITY_LABEL} />
           </SelectTrigger>

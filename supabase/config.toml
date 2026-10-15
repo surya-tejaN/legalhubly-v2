@@ -43,3 +43,6 @@ project_id = "ubljuduaxtdojaaggqpw"
 site_url = "https://www.legalhubly.com"
 additional_redirect_urls = ["https://www.legalhubly.com/**", "https://legalhubly.com/**", "http://127.0.0.1:5173/**", "http://localhost:5173/**"]
 enable_signup = true
+
+# Google / Apple: enable in Dashboard → Authentication → Providers
+# (store Client ID/Secret as Supabase secrets — do not commit keys here)
