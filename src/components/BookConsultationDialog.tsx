@@ -41,7 +41,8 @@ type Props = {
   onBooked?: () => void;
 };
 
-function buildSlots(availability: string): { value: string; label: string; soon: boolean }[] {
+/** Preview-only slots for UI — never bookable until clientBooking is on + real calendar. */
+function buildPreviewSlots(availability: string): { value: string; label: string; soon: boolean }[] {
   const slots: { value: string; label: string; soon: boolean }[] = [];
   const startOffset = availability === "available" ? 1 : availability === "busy" ? 5 : 14;
   const days = availability === "unavailable" ? 0 : 5;
@@ -95,18 +96,18 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
   const [type, setType] = useState("video");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const bookingEnabled = isFeatureEnabled("clientBooking");
+  /** When false: UI is visible, Confirm is blocked (no real calendar yet). */
+  const bookingLive = isFeatureEnabled("clientBooking");
 
   const slots = useMemo(
-    () => (lawyer && bookingEnabled ? buildSlots(lawyer.availability_status || "available") : []),
-    [lawyer, bookingEnabled],
+    () => (lawyer ? buildPreviewSlots(lawyer.availability_status || "available") : []),
+    [lawyer],
   );
   const avail = lawyer
     ? availabilityLabel(lawyer.availability_status, lawyer.next_available_date)
     : null;
-  const canBook = Boolean(
-    bookingEnabled && lawyer && slots.length > 0 && lawyer.availability_status !== "unavailable",
-  );
+  const hasPreviewSlots = Boolean(lawyer && slots.length > 0 && lawyer.availability_status !== "unavailable");
+  const canConfirm = bookingLive && hasPreviewSlots;
 
   const reset = () => {
     setSlot("");
@@ -117,22 +118,13 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
   };
 
   const handleOpenChange = (v: boolean) => {
-    if (!bookingEnabled) {
-      onOpenChange(false);
-      return;
-    }
     if (!v) reset();
     onOpenChange(v);
   };
 
-  // Booking is a future feature — never show synthetic slots publicly
-  if (!bookingEnabled) {
-    return null;
-  }
-
   const submit = async () => {
-    if (!bookingEnabled) {
-      toast.error("Online booking is coming soon.");
+    if (!bookingLive) {
+      toast.error("Online booking isn’t live yet. Real calendar slots are coming soon.");
       return;
     }
     if (!lawyer || !user) {
@@ -219,10 +211,21 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
           </div>
         ) : (
           <div className="space-y-4">
+            {!bookingLive && (
+              <div className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2.5 text-sm">
+                <p className="font-medium text-foreground">Booking preview — not available yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Live time slots and calendar booking are coming soon. You can explore the flow below,
+                  but Confirm is disabled. Use Visit Website or Message for now.
+                </p>
+              </div>
+            )}
+
             {avail && (
               <div
                 className={cn(
                   "rounded-xl border px-3 py-2.5 text-sm flex items-start gap-2",
+                  !bookingLive && "opacity-70",
                   avail.tone === "ok" && "border-success/30 bg-success/5 text-foreground",
                   avail.tone === "warn" && "border-warning/30 bg-warning/5 text-foreground",
                   avail.tone === "muted" && "border-border bg-muted/40 text-muted-foreground",
@@ -231,7 +234,7 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
                 <Clock className="h-4 w-4 mt-0.5 shrink-0 text-accent" />
                 <div>
                   <p className="font-medium">{avail.text}</p>
-                  {!canBook && (
+                  {!hasPreviewSlots && (
                     <p className="text-xs mt-1 text-muted-foreground">
                       Online booking isn’t open for this lawyer yet. Check back later or visit their
                       website.
@@ -241,11 +244,11 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
               </div>
             )}
 
-            {canBook && (
+            {hasPreviewSlots && (
               <>
                 <div className="space-y-2">
                   <Label>Meeting type</Label>
-                  <Select value={type} onValueChange={setType}>
+                  <Select value={type} onValueChange={setType} disabled={!bookingLive}>
                     <SelectTrigger className="h-11 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
@@ -260,18 +263,26 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
                     <Calendar className="h-3.5 w-3.5 text-accent" /> Available times
+                    {!bookingLive && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Preview
+                      </span>
+                    )}
                   </Label>
                   <div className="grid grid-cols-1 gap-2 max-h-44 overflow-y-auto pr-1">
                     {slots.map((s) => (
                       <button
                         key={s.value}
                         type="button"
-                        onClick={() => setSlot(s.value)}
+                        disabled={!bookingLive}
+                        onClick={() => bookingLive && setSlot(s.value)}
                         className={cn(
                           "text-left rounded-xl border px-3 py-2.5 text-sm transition-colors",
-                          slot === s.value
+                          !bookingLive && "opacity-60 cursor-not-allowed",
+                          bookingLive && slot === s.value
                             ? "border-accent bg-accent/10 text-foreground"
-                            : "border-border hover:border-accent/40 bg-card",
+                            : "border-border bg-card",
+                          bookingLive && slot !== s.value && "hover:border-accent/40",
                         )}
                       >
                         <span className="font-medium">{s.label}</span>
@@ -293,6 +304,7 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
                     onChange={(e) => setNotes(e.target.value)}
                     maxLength={500}
                     rows={3}
+                    disabled={!bookingLive}
                     placeholder="Brief summary — not legal advice yet, just context for the meeting."
                     className="rounded-xl resize-none"
                   />
@@ -313,15 +325,24 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
                   type="button"
                   variant="gold"
                   className="w-full gap-2"
-                  disabled={submitting || !slot}
+                  disabled={!canConfirm || submitting || (bookingLive && !slot)}
                   onClick={() => void submit()}
+                  title={
+                    bookingLive
+                      ? "Confirm booking"
+                      : "Booking disabled until live calendar slots are ready"
+                  }
                 >
                   {submitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Calendar className="h-4 w-4" />
                   )}
-                  {submitting ? "Booking…" : "Confirm booking"}
+                  {submitting
+                    ? "Booking…"
+                    : bookingLive
+                      ? "Confirm booking"
+                      : "Confirm unavailable"}
                 </Button>
               </>
             )}

@@ -160,17 +160,13 @@ export default function LawyerProfile() {
     firm: lawyer.firm,
   });
   const avail = availabilityLabel(lawyer.availability_status, lawyer.next_available_date);
-  const bookingEnabled = isFeatureEnabled("clientBooking");
-
   return (
     <div className="min-h-screen bg-background">
-      {bookingEnabled && (
-        <BookConsultationDialog
-          lawyer={lawyer}
-          open={bookOpen}
-          onOpenChange={setBookOpen}
-        />
-      )}
+      <BookConsultationDialog
+        lawyer={lawyer}
+        open={bookOpen}
+        onOpenChange={setBookOpen}
+      />
       {/* Navigation */}
       <nav className="sticky top-0 z-50 glass-nav border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -225,26 +221,19 @@ export default function LawyerProfile() {
                 >
                   <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
                 </Button>
-                {bookingEnabled ? (
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
-                    onClick={() => setBookOpen(true)}
-                  >
-                    <Calendar className="h-4 w-4" /> Book Consultation
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="gap-2 bg-white/80 text-primary/70 border border-white/80 shadow-sm"
-                    disabled
-                    title="Online booking coming soon — use Visit Website or Message"
-                  >
-                    <Calendar className="h-4 w-4" /> Booking soon
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  size="lg"
+                  className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
+                  onClick={() => setBookOpen(true)}
+                  title={
+                    isFeatureEnabled("clientBooking")
+                      ? "Book a consultation"
+                      : "Preview booking — confirm disabled until live slots"
+                  }
+                >
+                  <Calendar className="h-4 w-4" /> Book Consultation
+                </Button>
                 <Button
                   type="button"
                   size="lg"
@@ -368,26 +357,19 @@ export default function LawyerProfile() {
               >
                 <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
               </Button>
-              {bookingEnabled ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full mb-2 gap-2"
-                  onClick={() => setBookOpen(true)}
-                >
-                  <Calendar className="h-4 w-4" /> Book Consultation
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full mb-2 gap-2"
-                  disabled
-                  title="Online booking coming soon"
-                >
-                  <Calendar className="h-4 w-4" /> Booking soon
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mb-2 gap-2"
+                onClick={() => setBookOpen(true)}
+                title={
+                  isFeatureEnabled("clientBooking")
+                    ? "Book a consultation"
+                    : "Preview booking — confirm disabled until live slots"
+                }
+              >
+                <Calendar className="h-4 w-4" /> Book Consultation
+              </Button>
               <Button variant="ghost" className="w-full gap-2" onClick={handleSave}>
                 <Heart className={cn("h-4 w-4", saved && "fill-accent text-accent")} />
                 {saved ? "Saved" : "Save Lawyer"}

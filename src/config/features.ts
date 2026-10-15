@@ -14,7 +14,10 @@ export const features = {
   clientConsultations: true,
   clientDocuments: true,
   clientPayments: true,
-  /** Real calendar booking — OFF until live slots exist (no synthetic times). */
+  /**
+   * When false: Book UI stays visible (preview), but Confirm is blocked.
+   * Turn true only after real lawyer calendar / live time slots exist.
+   */
   clientBooking: false,
 
   lawyerDashboard: true,

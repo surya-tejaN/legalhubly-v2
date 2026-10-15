@@ -75,8 +75,7 @@ function LawyerCard({
     name: lawyer.name,
     firm: lawyer.firm,
   });
-  const bookingEnabled = isFeatureEnabled("clientBooking");
-  const bookable = bookingEnabled && lawyer.availability_status !== "unavailable";
+  const bookable = lawyer.availability_status !== "unavailable";
 
   return (
     <motion.div
@@ -185,40 +184,28 @@ function LawyerCard({
             >
               {isDirectSite ? "Visit Website" : "Find Online"} <ExternalLink className="h-3.5 w-3.5" />
             </Button>
-            {bookingEnabled ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2 text-xs w-full sm:w-auto"
-                disabled={!bookable}
-                title={
-                  bookable
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs w-full sm:w-auto"
+              disabled={!bookable}
+              title={
+                bookable
+                  ? isFeatureEnabled("clientBooking")
                     ? "Book a consultation"
-                    : "Not available to book right now — check back later"
-                }
-                onClick={() => onBook(lawyer)}
-              >
-                <Calendar className="h-3.5 w-3.5" />
-                {bookable
-                  ? lawyer.availability_status === "busy"
-                    ? "Book later"
-                    : "Book consult"
-                  : "Unavailable"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2 text-xs w-full sm:w-auto"
-                disabled
-                title="Online booking coming soon — use Visit Website or Message"
-              >
-                <Calendar className="h-3.5 w-3.5" />
-                Booking soon
-              </Button>
-            )}
+                    : "Preview booking — confirm disabled until live slots"
+                  : "Not available to book right now — check back later"
+              }
+              onClick={() => onBook(lawyer)}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              {bookable
+                ? lawyer.availability_status === "busy"
+                  ? "Book later"
+                  : "Book consult"
+                : "Unavailable"}
+            </Button>
             <Button variant="ghost" size="sm" asChild className="text-xs">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>
             </Button>
