@@ -26,13 +26,13 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "I’m your Legalhubly Match Coach for Chicago. Simple, fast, and free to start:\n\n1) Describe your issue in plain language\n2) I’ll map the practice area and point you to top matches\n3) Connect — profiles, ratings, website, or message\n\nOnline booking is coming soon. Tell me what happened (or pick a quick start below). I can’t give legal advice.";
+  "I’m your Legalhubly Match Coach for Chicago — trained to match you to the right practice area and real directory lawyers.\n\n1) Describe your issue in plain language\n2) I’ll name the practice area + 2–3 Chicago lawyers\n3) Connect — profiles, website, or message\n\nOnline booking is coming soon. I can’t give legal advice.";
 
 const QUICK_STARTS = [
   { label: "Describe my issue", prompt: "I need help finding a Chicago lawyer. Here’s my situation: " },
-  { label: "How matching works", prompt: "Explain how Legalhubly matches me to a lawyer in three steps." },
-  { label: "Find lawyers now", prompt: "Take me to Find Lawyers for Chicago and tell me how to filter by practice area." },
-  { label: "Visit a lawyer site", prompt: "How do I visit a Chicago lawyer’s website or message them on Legalhubly?" },
+  { label: "Divorce / family", prompt: "My spouse wants a divorce and we have kids in Chicago. Who should I talk to?" },
+  { label: "Immigration", prompt: "I need help with a green card / visa in Chicago." },
+  { label: "Personal injury", prompt: "Someone rear-ended me in Chicago and I’m hurt. Who handles this?" },
 ];
 
 export default function SupportChat() {
