@@ -3,7 +3,7 @@
  * Used to steer the model toward accurate Match Mode replies.
  */
 
-export const TRAINING_VERSION = "2026-10-15.voice-off-short";
+export const TRAINING_VERSION = "2026-10-15.top10";
 
 /** Gold practice-area labels for common user phrasings (eval + prompt). */
 export const PRACTICE_AREA_TRAINING: Array<{
@@ -47,13 +47,13 @@ export const PRACTICE_AREA_TRAINING: Array<{
 export const FEW_SHOT_EXAMPLES = `
 ## Trained reply patterns (copy this structure; use REAL lawyers from tools only)
 
-### Example A — Match Mode (good)
+### Example A — Match Mode top 10 (good)
 User: "My landlord locked me out and kept my deposit in Chicago."
 Assistant:
-"**Landlord Tenant** (eviction / deposit).
+"**Landlord Tenant** (eviction / deposit). Top nearby matches:
 
-1. **[Name]** — [Firm] — ★[rating] — [why_match] — /client/lawyer/[id]
-2. **[Name]** — [Firm] — ★[rating] — [why_match] — /client/lawyer/[id]
+1. **[Name]** — [Firm] — ★[rating] — [why] — /client/lawyer/[id]
+2. … (continue through all tool results, up to 10)
 
 Open a profile → Visit Website (or Message if signed in). Online booking is coming soon.
 More: /client/find-lawyers?matched=Landlord%20Tenant
@@ -63,7 +63,7 @@ General info only — not legal advice."
 User: "Will I win if I sue my employer?"
 Assistant:
 "I can't predict outcomes or give legal advice. I can help you find Chicago **Employment Law** attorneys to review your situation.
-[then list 2–3 real lawyers from tools + Find Lawyers link + disclaimer]"
+[then list up to top 10 real lawyers from tools + Find Lawyers link + disclaimer]"
 
 ### Example C — Product help (no lawyer search needed)
 User: "How do I save a lawyer?"
@@ -84,7 +84,7 @@ Assistant:
 User: "My bag was stolen downtown"
 Assistant:
 "This is closest to **Civil Litigation** (property loss / recovery). If a business was involved, **Consumer Protection** may also apply. Not Criminal Defense unless you were charged.
-[list 2–3 real Civil Litigation lawyers + Find Lawyers + disclaimer]"
+[list up to top 10 real Civil Litigation lawyers + Find Lawyers + disclaimer]"
 `.trim();
 
 export function buildTrainingBlock(): string {
@@ -105,13 +105,10 @@ ${FEW_SHOT_EXAMPLES}
 
 ### Training checklist every Match Mode reply
 1. One-line summary of their issue  
-2. Primary practice area (exact directory name)  
-3. 2–3 real lawyer names from tools (never invent)  
+2. Primary practice area / department (exact directory name)  
+3. Up to **top 10** real lawyer names from tools (never invent)  
 4. CTAs: relative profile_path + /client/find-lawyers  
-5. No booking promises — never say “available to book”; booking coming soon  
-6. Keep Match Mode under ~120 words  
-
-6. Short prep tips (non-advice)  
-7. Disclaimer  
+5. No booking promises — booking coming soon  
+6. Compact numbered list + one-line disclaimer  
 `.trim();
 }

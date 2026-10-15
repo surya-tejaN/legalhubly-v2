@@ -197,23 +197,23 @@ serve(async (req) => {
       {
         role: "system",
         content: SUPPORT_SYSTEM_PROMPT +
-          "\n\nTOOLS: Call search_chicago_lawyers in Match Mode. When directory results are in context, you MUST list 2–3 lawyers by name with profile links. Never answer Match Mode with only Find Lawyers CTAs.",
+          "\n\nTOOLS: Call search_chicago_lawyers with limit 10 in Match Mode. When directory results are in context, you MUST list up to the top 10 lawyers by name with profile paths (numbered 1–10). Never invent names. Never answer Match Mode with only Find Lawyers CTAs.",
       },
       ...messages,
     ];
 
-    // Pre-fetch lawyers so names always appear even if the model skips tool_calls
+    // Pre-fetch top 10 so names always appear even if the model skips tool_calls
     if (matchMode) {
       const area = inferPracticeArea(userText);
       const prefetched = await runMatchTool(
         serviceClient,
         "search_chicago_lawyers",
-        JSON.stringify({ practice_area: area, query: userText.slice(0, 80), limit: 3 }),
+        JSON.stringify({ practice_area: area, query: userText.slice(0, 80), limit: 10 }),
       );
       working.push({
         role: "system",
         content:
-          `Directory search results for practice area "${area}" (use these exact names/links):\n${prefetched}\n\nIn your reply: (1) practice area, (2) list each lawyer Name — Firm — ★rating — profile_url, (3) Find Lawyers CTA, (4) prep tips, (5) disclaimer.`,
+          `Top-10 Chicago directory results for practice area "${area}" (use these exact names/paths only):\n${prefetched}\n\nIn your reply: (1) name the practice area/department, (2) numbered list of ALL returned lawyers (up to 10) as Name — Firm — ★rating — why_match — profile_path, (3) Find Lawyers CTA /client/find-lawyers?matched=..., (4) one-line disclaimer. Compact format.`,
       });
       logInfo({ fn: FN, requestId, event: "prefetch_lawyers", area, matchMode: true });
     }

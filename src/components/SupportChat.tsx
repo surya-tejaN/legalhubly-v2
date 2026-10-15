@@ -26,7 +26,7 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "I’m your Legalhubly Match Coach for Chicago — trained to match you to the right practice area and real directory lawyers.\n\n1) Describe your issue in plain language\n2) I’ll name the practice area + 2–3 Chicago lawyers\n3) Connect — profiles, website, or message\n\nOnline booking is coming soon. I can’t give legal advice.\n\nVoice replies are off by default — tap the speaker icon if you want them read aloud.";
+  "I’m your Legalhubly Match Coach for Chicago — trained to match you to the right practice area and top nearby lawyers.\n\n1) Describe your issue in plain language\n2) I’ll name the department (practice area) + up to 10 Chicago lawyers\n3) Connect — profiles, website, or message\n\nOnline booking is coming soon. I can’t give legal advice.\n\nVoice replies are off by default — tap the speaker icon if you want them read aloud.";
 
 /** Turn URLs and app paths into clickable links (stays on current origin). */
 function ChatText({ text }: { text: string }) {

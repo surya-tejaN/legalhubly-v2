@@ -21,9 +21,9 @@ export const MATCH_COACH_TOOLS = [
           },
           limit: {
             type: "integer",
-            description: "Max lawyers to return (default 3, max 5)",
+            description: "Max lawyers to return (default 10, max 10) — top nearby matches",
             minimum: 1,
-            maximum: 5,
+            maximum: 10,
           },
         },
         required: ["practice_area"],
@@ -145,7 +145,7 @@ export async function runMatchTool(
   if (name === "search_chicago_lawyers") {
     const practiceArea = typeof args.practice_area === "string" ? args.practice_area.trim() : "";
     const query = typeof args.query === "string" ? args.query.trim() : "";
-    const limit = Math.min(5, Math.max(1, Number(args.limit) || 3));
+    const limit = Math.min(10, Math.max(1, Number(args.limit) || 10));
 
     const fetchRows = async (area: string) => {
       let q = serviceClient
@@ -155,7 +155,7 @@ export async function runMatchTool(
         )
         .eq("city", "Chicago")
         .order("rating", { ascending: false })
-        .limit(40);
+        .limit(80);
 
       if (area) {
         q = q.contains("practice_areas", [area]);
@@ -274,7 +274,7 @@ export async function runMatchTool(
       lawyers,
       instruction:
         lawyers.length > 0
-          ? "REQUIRED: List 2–3 lawyers by NAME and FIRM. For each: rating, one why_match, and profile_path (e.g. /client/lawyer/{id}). Keep reply under ~120 words. No booking promises — booking coming soon. Prefer Visit Website / Message."
+          ? `REQUIRED: List ALL ${lawyers.length} lawyers (up to top 10) numbered 1–${lawyers.length} by NAME and FIRM. For each: ★rating, one short why_match, profile_path (/client/lawyer/{id}). Compact bullets. End with Find Lawyers CTA + one-line disclaimer. No booking promises.`
           : "No matches — suggest /client/find-lawyers browse.",
     });
   }
