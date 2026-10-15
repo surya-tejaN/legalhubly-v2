@@ -81,20 +81,28 @@ export async function streamSupportReply(
   const sessionId = getSupportSessionId();
   const requestId = crypto.randomUUID();
 
-  const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/client-support`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      apikey: env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      "x-request-id": requestId,
-    },
-    body: JSON.stringify({
-      messages: payload,
-      ...(sessionId ? { sessionId } : {}),
-    }),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/client-support`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        apikey: env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "x-request-id": requestId,
+      },
+      body: JSON.stringify({
+        messages: payload,
+        ...(sessionId ? { sessionId } : {}),
+      }),
+      signal,
+    });
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    throw new Error(
+      "Could not reach Match Coach. Check your connection and try again.",
+    );
+  }
 
   const newSession = res.headers.get("x-session-id");
   if (newSession) setSupportSessionId(newSession);
