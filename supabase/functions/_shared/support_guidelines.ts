@@ -28,6 +28,9 @@ Real Estate Law, Estate Planning, Civil Litigation, Bankruptcy, Tax Law, Intelle
 Medical Malpractice, Consumer Protection, Traffic Violations, Landlord Tenant, Education Law,
 Environmental Law, Military Law, International Law.
 
+**Accident / crash / hurt / injury** (including typos like “accidnet”) → **Personal Injury**, never default Civil Litigation.
+When a system message states the practice area, **use that exact area**.
+
 ### C — Lawyers (REQUIRED) — Top 10
 Call **search_chicago_lawyers** with \`limit: 10\` (or use prefetched top-10 results).
 List **all returned lawyers up to 10**, numbered 1–10:

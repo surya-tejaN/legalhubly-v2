@@ -66,7 +66,12 @@ export function inferPracticeArea(text: string): string {
   ) {
     return "Medical Malpractice";
   }
-  if (/\b(injury|car crash|accident|slip|fall|hurt|rear-?ended|broke my)\b/.test(t)) {
+  // Personal Injury — include common typos (accidnet, acident) + crash/wreck language
+  if (
+    /\b(injury|injur|car crash|accident|accidnet|acident|accidents|slip|fall|hurt|rear-?ended|broke my|whiplash|car wreck|hit by|hit and run)\b/.test(t) ||
+    /\baccid/.test(t) ||
+    (/\b(crash|wreck|collision)\b/.test(t) && !/\b(plane|stock|data)\b/.test(t))
+  ) {
     return "Personal Injury";
   }
   if (/\b(fired|harassment|wage|employer|wrongful|overtime|discrimination)\b/.test(t)) {
@@ -111,7 +116,7 @@ export function wantsLawyerMatch(text: string): boolean {
     return false;
   }
   return (
-    /\b(lawyer|attorney|legal|sue|court|stolen|theft|lost|divorce|custody|arrest|visa|injury|fired|evict|help me|find|match)\b/.test(t) ||
+    /\b(lawyer|attorney|legal|sue|court|stolen|theft|lost|divorce|custody|arrest|visa|injury|injur|accident|accid|crash|wreck|fired|evict|help me|find|match|contact)\b/.test(t) ||
     t.split(/\s+/).length >= 6
   );
 }

@@ -3,7 +3,7 @@
  * Used to steer the model toward accurate Match Mode replies.
  */
 
-export const TRAINING_VERSION = "2026-10-15.top10";
+export const TRAINING_VERSION = "2026-10-15.top10-pi-fix";
 
 /** Gold practice-area labels for common user phrasings (eval + prompt). */
 export const PRACTICE_AREA_TRAINING: Array<{
@@ -18,6 +18,9 @@ export const PRACTICE_AREA_TRAINING: Array<{
   { user: "I was arrested and need a criminal lawyer", primary: "Criminal Defense" },
   { user: "Someone rear-ended me and my back hurts", primary: "Personal Injury" },
   { user: "I slipped on ice outside a store and broke my wrist", primary: "Personal Injury" },
+  { user: "i got a accident which lawyer should i contact", primary: "Personal Injury" },
+  { user: "i got a accidnet which lawyer should i cotact", primary: "Personal Injury", note: "typos still map to PI" },
+  { user: "car crash in Chicago who should I call", primary: "Personal Injury" },
   { user: "I need a green card / H1B help", primary: "Immigration Law" },
   { user: "Asylum / ICE detention help", primary: "Immigration Law" },
   { user: "My landlord is trying to evict me", primary: "Landlord Tenant" },

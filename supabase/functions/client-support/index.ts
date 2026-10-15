@@ -210,12 +210,30 @@ serve(async (req) => {
         "search_chicago_lawyers",
         JSON.stringify({ practice_area: area, query: userText.slice(0, 80), limit: 10 }),
       );
+      let resultCount = 0;
+      try {
+        const parsed = JSON.parse(prefetched) as { count?: number; lawyers?: unknown[] };
+        resultCount = typeof parsed.count === "number"
+          ? parsed.count
+          : Array.isArray(parsed.lawyers)
+          ? parsed.lawyers.length
+          : 0;
+      } catch {
+        resultCount = 0;
+      }
       working.push({
         role: "system",
         content:
-          `Top-10 Chicago directory results for practice area "${area}" (use these exact names/paths only):\n${prefetched}\n\nIn your reply: (1) name the practice area/department, (2) numbered list of ALL returned lawyers (up to 10) as Name — Firm — ★rating — why_match — profile_path, (3) Find Lawyers CTA /client/find-lawyers?matched=..., (4) one-line disclaimer. Compact format.`,
+          `Practice area/department MUST be "${area}" (do not substitute Civil Litigation unless that is the area).\n` +
+          `Top Chicago directory results (${resultCount} lawyers — use these exact names/paths only):\n${prefetched}\n\n` +
+          `REQUIRED reply format:\n` +
+          `(1) One line confirming department: **${area}**\n` +
+          `(2) Numbered list with EVERY lawyer in the JSON (all ${resultCount}, max 10) — each line: Name — Firm — ★rating — short why_match — profile_path\n` +
+          `(3) CTA: /client/find-lawyers?matched=${encodeURIComponent(area)}\n` +
+          `(4) One-line disclaimer: general info only — not legal advice.\n` +
+          `Do not stop after 2–3 names. Do not invent lawyers.`,
       });
-      logInfo({ fn: FN, requestId, event: "prefetch_lawyers", area, matchMode: true });
+      logInfo({ fn: FN, requestId, event: "prefetch_lawyers", area, matchMode: true, resultCount });
     }
 
     // Tool loop (non-streaming), then stream final answer
