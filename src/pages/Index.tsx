@@ -6,7 +6,6 @@ import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { matchPracticeAreas } from "@/lib/practiceAreas";
 import { LAUNCH_CITY_LABEL } from "@/lib/location";
-import { practiceAreaToSlug } from "@/lib/pageMeta";
 import { shareLegalhubly } from "@/lib/shareReferral";
 import Logo from "@/components/Logo";
 import { toast } from "sonner";
@@ -351,7 +350,7 @@ export default function Index() {
             {CATEGORIES.map((cat, i) => (
               <motion.div key={cat.label} {...fadeUp} {...staggerChild(i)}>
                 <Link
-                  to={`/chicago/${practiceAreaToSlug(cat.practice)}`}
+                  to={`/client/find-lawyers?matched=${encodeURIComponent(cat.practice)}`}
                   className="group flex items-center gap-4 p-6 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover hover:border-accent/20 transition-all duration-300"
                 >
                   <div className="h-12 w-12 rounded-xl bg-accent/8 flex items-center justify-center shrink-0 group-hover:bg-accent/12 group-hover:scale-105 transition-all duration-300">
