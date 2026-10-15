@@ -26,7 +26,10 @@ export function getStoredReferral(): { ref: string | null; source: string | null
 }
 
 export function buildShareUrl(path = "/", opts?: { ref?: string }) {
-  const base = "https://www.legalhubly.com";
+  const base =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://www.legalhubly.com";
   const url = new URL(path.startsWith("http") ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`);
   const ref = opts?.ref || getStoredReferral().ref || "share";
   url.searchParams.set("ref", ref);

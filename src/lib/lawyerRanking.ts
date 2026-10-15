@@ -87,7 +87,7 @@ export function scoreLawyer(
 
   if (lawyer.availability_status === "available") {
     score += 6;
-    why.push("Available to book");
+    why.push("Actively listed");
   } else if (lawyer.availability_status === "busy") {
     score += 2;
   }

@@ -236,7 +236,7 @@ export async function runMatchTool(
       }
       if (l.availability_status === "available") {
         score += 6;
-        why.push("Available to book");
+        why.push("Actively listed");
       }
       score = Math.min(100, Math.round(score));
       if (!why.length) why.push("Chicago directory match");
@@ -260,7 +260,6 @@ export async function runMatchTool(
       match_score: score,
       why_match: why.slice(0, 3),
       profile_path: `/client/lawyer/${l.id}`,
-      profile_url: `https://www.legalhubly.com/client/lawyer/${l.id}`,
       find_path: practiceArea
         ? `/client/find-lawyers?matched=${encodeURIComponent(practiceArea)}&sort=best_match`
         : "/client/find-lawyers?sort=best_match",
@@ -275,7 +274,7 @@ export async function runMatchTool(
       lawyers,
       instruction:
         lawyers.length > 0
-          ? "REQUIRED: List these lawyers by NAME and FIRM. For each include rating, one why_match reason, and profile_url. Do not skip names."
+          ? "REQUIRED: List 2–3 lawyers by NAME and FIRM. For each: rating, one why_match, and profile_path (e.g. /client/lawyer/{id}). Keep reply under ~120 words. No booking promises — booking coming soon. Prefer Visit Website / Message."
           : "No matches — suggest /client/find-lawyers browse.",
     });
   }

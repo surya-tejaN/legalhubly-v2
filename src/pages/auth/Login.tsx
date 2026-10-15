@@ -13,7 +13,7 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck, Sparkles } from "luc
 import Logo from "@/components/Logo";
 
 export default function Login() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const dashboardPath = useDashboardPath(profile?.role);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +22,7 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [profileWaitMs, setProfileWaitMs] = useState(0);
 
   useEffect(() => {
     const oauthErr = consumeOAuthRedirectError();
@@ -34,12 +35,44 @@ export default function Login() {
     return () => window.clearInterval(t);
   }, [cooldown]);
 
+  useEffect(() => {
+    if (!user || profile || loading) {
+      setProfileWaitMs(0);
+      return;
+    }
+    const started = Date.now();
+    const id = window.setInterval(() => setProfileWaitMs(Date.now() - started), 500);
+    return () => window.clearInterval(id);
+  }, [user, profile, loading]);
+
   // Wait for profile so lawyer/admin don't flash into client dashboard
   if (!loading && user && profile) return <Navigate to={dashboardPath} replace />;
   if (!loading && user && !profile) {
+    if (profileWaitMs > 8000) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 px-4 text-center">
+          <p className="text-sm font-medium text-foreground">We couldn’t load your profile.</p>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Your account may still be finishing setup. Retry, or sign out and try again.
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button type="button" variant="outline" onClick={() => void refreshProfile()}>
+              Retry
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => void signOut()}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <p className="text-sm text-muted-foreground">Loading your account…</p>
       </div>
     );
   }

@@ -75,18 +75,23 @@ export function availabilityLabel(status: string, nextDate?: string | null): {
   text: string;
   tone: "ok" | "warn" | "muted";
 } {
+  const bookingLive = isFeatureEnabled("clientBooking");
   if (status === "available") {
-    return { text: "Available to book now", tone: "ok" };
+    return bookingLive
+      ? { text: "Available to book now", tone: "ok" }
+      : { text: "Listed · online booking coming soon", tone: "ok" };
   }
   if (status === "busy") {
     return {
       text: nextDate
         ? `Busy now · next openings around ${new Date(nextDate).toLocaleDateString()}`
-        : "Busy now · future slots available",
+        : bookingLive
+          ? "Busy now · future slots available"
+          : "Busy · check website or message for timing",
       tone: "warn",
     };
   }
-  return { text: "Not booking right now · check back soon", tone: "muted" };
+  return { text: "Not taking new bookings right now", tone: "muted" };
 }
 
 export default function BookConsultationDialog({ lawyer, open, onOpenChange, onBooked }: Props) {

@@ -3,7 +3,7 @@
  * Used to steer the model toward accurate Match Mode replies.
  */
 
-export const TRAINING_VERSION = "2026-10-14.final";
+export const TRAINING_VERSION = "2026-10-15.voice-off-short";
 
 /** Gold practice-area labels for common user phrasings (eval + prompt). */
 export const PRACTICE_AREA_TRAINING: Array<{
@@ -50,17 +50,14 @@ export const FEW_SHOT_EXAMPLES = `
 ### Example A — Match Mode (good)
 User: "My landlord locked me out and kept my deposit in Chicago."
 Assistant:
-"This sounds closest to **Landlord Tenant** (eviction / security deposit).
+"**Landlord Tenant** (eviction / deposit).
 
-Here are Chicago lawyers from Legalhubly's directory:
-1. **[Name from tool]** — [Firm] — ★[rating] — [why_match] — https://www.legalhubly.com/client/lawyer/[id]
-2. **[Name from tool]** — …
+1. **[Name]** — [Firm] — ★[rating] — [why_match] — /client/lawyer/[id]
+2. **[Name]** — [Firm] — ★[rating] — [why_match] — /client/lawyer/[id]
 
-Next: open a profile → Visit Website or Message (sign-in required to message). Online booking is coming soon.
-Browse more: https://www.legalhubly.com/client/find-lawyers?matched=Landlord%20Tenant
-
-Prep (general): timeline, lease/deposit receipts, questions to ask the attorney.
-This is general information for education only — not legal advice. For advice about your situation, consult a licensed Illinois attorney."
+Open a profile → Visit Website (or Message if signed in). Online booking is coming soon.
+More: /client/find-lawyers?matched=Landlord%20Tenant
+General info only — not legal advice."
 
 ### Example B — Refuse legal advice (good)
 User: "Will I win if I sue my employer?"
@@ -110,8 +107,10 @@ ${FEW_SHOT_EXAMPLES}
 1. One-line summary of their issue  
 2. Primary practice area (exact directory name)  
 3. 2–3 real lawyer names from tools (never invent)  
-4. CTAs: profile links + Find Lawyers (www.legalhubly.com)  
-5. No booking promises — booking coming soon  
+4. CTAs: relative profile_path + /client/find-lawyers  
+5. No booking promises — never say “available to book”; booking coming soon  
+6. Keep Match Mode under ~120 words  
+
 6. Short prep tips (non-advice)  
 7. Disclaimer  
 `.trim();

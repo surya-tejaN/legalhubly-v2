@@ -122,7 +122,7 @@ export default function LawyerProfile() {
       return;
     }
     if (!lawyer?.user_id) {
-      toast.message("This lawyer isn’t on Legalhubly messaging yet. Book a consultation or visit their website.");
+      toast.message("This lawyer isn’t on Legalhubly messaging yet. Use Visit Website instead.");
       return;
     }
     setMessaging(true);
@@ -221,29 +221,34 @@ export default function LawyerProfile() {
                 >
                   <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
                 </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
-                  onClick={() => setBookOpen(true)}
-                  title={
-                    isFeatureEnabled("clientBooking")
-                      ? "Book a consultation"
-                      : "Preview booking — confirm disabled until live slots"
-                  }
-                >
-                  <Calendar className="h-4 w-4" /> Book Consultation
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
-                  onClick={() => void handleMessage()}
-                  disabled={messaging}
-                >
-                  {messaging ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                  Message
-                </Button>
+                {lawyer.availability_status !== "unavailable" && (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
+                    onClick={() => setBookOpen(true)}
+                    title={
+                      isFeatureEnabled("clientBooking")
+                        ? "Book a consultation"
+                        : "Preview booking — confirm disabled until live slots"
+                    }
+                  >
+                    <Calendar className="h-4 w-4" />{" "}
+                    {isFeatureEnabled("clientBooking") ? "Book Consultation" : "Preview booking"}
+                  </Button>
+                )}
+                {lawyer.user_id ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
+                    onClick={() => void handleMessage()}
+                    disabled={messaging}
+                  >
+                    {messaging ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                    Message
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="lg"
@@ -357,19 +362,38 @@ export default function LawyerProfile() {
               >
                 <ExternalLink className="h-4 w-4" /> {isDirectSite ? "Visit Website" : "Find Online"}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full mb-2 gap-2"
-                onClick={() => setBookOpen(true)}
-                title={
-                  isFeatureEnabled("clientBooking")
-                    ? "Book a consultation"
-                    : "Preview booking — confirm disabled until live slots"
-                }
-              >
-                <Calendar className="h-4 w-4" /> Book Consultation
-              </Button>
+              {lawyer.availability_status !== "unavailable" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mb-2 gap-2"
+                  onClick={() => setBookOpen(true)}
+                  title={
+                    isFeatureEnabled("clientBooking")
+                      ? "Book a consultation"
+                      : "Preview booking — confirm disabled until live slots"
+                  }
+                >
+                  <Calendar className="h-4 w-4" />{" "}
+                  {isFeatureEnabled("clientBooking") ? "Book Consultation" : "Preview booking"}
+                </Button>
+              )}
+              {lawyer.user_id ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mb-2 gap-2"
+                  onClick={() => void handleMessage()}
+                  disabled={messaging}
+                >
+                  {messaging ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  Message
+                </Button>
+              ) : (
+                <p className="text-[11px] text-muted-foreground mb-2 text-center">
+                  Messaging not available for this listing — use Visit Website.
+                </p>
+              )}
               <Button variant="ghost" className="w-full gap-2" onClick={handleSave}>
                 <Heart className={cn("h-4 w-4", saved && "fill-accent text-accent")} />
                 {saved ? "Saved" : "Save Lawyer"}

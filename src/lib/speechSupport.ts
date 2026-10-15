@@ -60,13 +60,30 @@ export function pickPreferredVoice(): SpeechSynthesisVoice | null {
   return voices.find((v) => v.lang.toLowerCase().startsWith("en")) ?? voices[0] ?? null;
 }
 
+/** Strip URLs/markdown and shorten — browser TTS sounds bad on long Match Mode replies. */
+export function textForSpeech(raw: string, maxChars = 220): string {
+  let t = raw
+    .replace(/https?:\/\/\S+/gi, " ")
+    .replace(/\/(?:client|chicago|lawyer|signup|login)[^\s)]*/gi, " ")
+    .replace(/[*#_>`|]+/g, "")
+    .replace(/★/g, " rated ")
+    .replace(/\n+/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (t.length > maxChars) {
+    t = `${t.slice(0, maxChars).replace(/\s+\S*$/, "")}.`;
+  }
+  return t;
+}
+
 export function speakText(
   text: string,
-  opts?: { lang?: string; onEnd?: () => void; onStart?: () => void },
+  opts?: { lang?: string; onEnd?: () => void; onStart?: () => void; maxChars?: number },
 ): void {
-  if (!isSpeechSynthesisSupported() || !text.trim()) return;
+  const spoken = textForSpeech(text, opts?.maxChars ?? 220);
+  if (!isSpeechSynthesisSupported() || !spoken) return;
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text.trim());
+  const utter = new SpeechSynthesisUtterance(spoken);
   utter.lang = opts?.lang ?? "en-US";
   utter.rate = 1.02;
   utter.pitch = 1;

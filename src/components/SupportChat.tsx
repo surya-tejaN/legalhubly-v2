@@ -26,7 +26,63 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "I’m your Legalhubly Match Coach for Chicago — trained to match you to the right practice area and real directory lawyers.\n\n1) Describe your issue in plain language\n2) I’ll name the practice area + 2–3 Chicago lawyers\n3) Connect — profiles, website, or message\n\nOnline booking is coming soon. I can’t give legal advice.";
+  "I’m your Legalhubly Match Coach for Chicago — trained to match you to the right practice area and real directory lawyers.\n\n1) Describe your issue in plain language\n2) I’ll name the practice area + 2–3 Chicago lawyers\n3) Connect — profiles, website, or message\n\nOnline booking is coming soon. I can’t give legal advice.\n\nVoice replies are off by default — tap the speaker icon if you want them read aloud.";
+
+/** Turn URLs and app paths into clickable links (stays on current origin). */
+function ChatText({ text }: { text: string }) {
+  const tokens = text.split(/(\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s)]+|\/(?:client|chicago|signup|login|forgot-password|reset-password|contact|about)[^\s),.]*)/g);
+  return (
+    <>
+      {tokens.map((token, i) => {
+        if (!token) return null;
+        const md = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (md) {
+          const href = md[2];
+          const label = md[1];
+          if (href.startsWith("/")) {
+            return (
+              <Link key={i} to={href} className="underline font-medium text-accent break-all">
+                {label}
+              </Link>
+            );
+          }
+          return (
+            <a key={i} href={href} target="_blank" rel="noopener noreferrer" className="underline font-medium text-accent break-all">
+              {label}
+            </a>
+          );
+        }
+        if (/^https?:\/\//i.test(token)) {
+          try {
+            const u = new URL(token);
+            if (u.hostname.endsWith("legalhubly.com") && typeof window !== "undefined") {
+              return (
+                <Link key={i} to={`${u.pathname}${u.search}${u.hash}`} className="underline font-medium text-accent break-all">
+                  {`${u.pathname}${u.search}` || token}
+                </Link>
+              );
+            }
+          } catch {
+            // fall through
+          }
+          return (
+            <a key={i} href={token} target="_blank" rel="noopener noreferrer" className="underline font-medium text-accent break-all">
+              {token}
+            </a>
+          );
+        }
+        if (token.startsWith("/")) {
+          return (
+            <Link key={i} to={token} className="underline font-medium text-accent break-all">
+              {token}
+            </Link>
+          );
+        }
+        return <span key={i}>{token}</span>;
+      })}
+    </>
+  );
+}
 
 const QUICK_STARTS = [
   { label: "Describe my issue", prompt: "I need help finding a Chicago lawyer. Here’s my situation: " },
@@ -45,8 +101,9 @@ export default function SupportChat() {
   const [hearing, setHearing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [interim, setInterim] = useState("");
-  const [handsFree, setHandsFree] = useState(true);
-  const [voiceOut, setVoiceOut] = useState(true);
+  /** Off by default — voice is opt-in (browser TTS is rough on long replies). */
+  const [handsFree, setHandsFree] = useState(false);
+  const [voiceOut, setVoiceOut] = useState(false);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: WELCOME },
@@ -249,9 +306,11 @@ export default function SupportChat() {
         controller.signal,
       );
 
+      // Opt-in only; speak a short cleaned summary (not full URLs/markdown)
       if (voiceOutRef.current && canSpeak && fullReply.trim()) {
         setSpeaking(true);
         speakText(fullReply, {
+          maxChars: 200,
           onEnd: () => setSpeaking(false),
           onStart: () => setSpeaking(true),
         });
@@ -381,9 +440,25 @@ export default function SupportChat() {
                     className="mb-2 max-h-40 rounded-lg border border-black/10 object-cover w-full"
                   />
                 )}
-                {m.content || (busy && i === messages.length - 1 ? "…" : "")}
+                {m.content
+                  ? <ChatText text={m.content} />
+                  : (busy && i === messages.length - 1 ? "…" : "")}
               </div>
             ))}
+
+            {!user && (
+              <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-xs text-muted-foreground space-y-2">
+                <p>Sign in free to use Match Coach — describe your issue and get Chicago lawyer matches.</p>
+                <div className="flex gap-2">
+                  <Button asChild size="sm" className="h-8 text-xs">
+                    <Link to="/login">Sign in</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="h-8 text-xs">
+                    <Link to="/signup">Sign up</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {user && messages.length <= 2 && !busy && (
               <div className="flex flex-wrap gap-1.5 px-1 pt-1">

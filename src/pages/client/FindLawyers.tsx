@@ -201,9 +201,11 @@ function LawyerCard({
             >
               <Calendar className="h-3.5 w-3.5" />
               {bookable
-                ? lawyer.availability_status === "busy"
-                  ? "Book later"
-                  : "Book consult"
+                ? isFeatureEnabled("clientBooking")
+                  ? lawyer.availability_status === "busy"
+                    ? "Book later"
+                    : "Book consult"
+                  : "Preview book"
                 : "Unavailable"}
             </Button>
             <Button variant="ghost" size="sm" asChild className="text-xs">
