@@ -1,8 +1,10 @@
 # Legalhubly — https://www.legalhubly.com
 User-agent: *
 Allow: /
+Allow: /client/find-lawyers
+Allow: /chicago/
 
-# Keep private app areas out of search indexes
+# Keep private / low-value app areas out of search indexes
 Disallow: /client/dashboard
 Disallow: /client/messages
 Disallow: /client/cases
@@ -11,17 +13,24 @@ Disallow: /client/documents
 Disallow: /client/payments
 Disallow: /client/settings
 Disallow: /client/profile
+Disallow: /client/saved-lawyers
 Disallow: /lawyer/
 Disallow: /firm/
 Disallow: /admin/
+Disallow: /login
+Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /verify-email-success
+Disallow: /pitch/
 
 User-agent: Googlebot
 Allow: /
+Allow: /chicago/
+Allow: /client/find-lawyers
 
 User-agent: Bingbot
 Allow: /
+Allow: /chicago/
+Allow: /client/find-lawyers
 
 Sitemap: https://www.legalhubly.com/sitemap.xml
-Sitemap: https://legalhubly.com/sitemap.xml

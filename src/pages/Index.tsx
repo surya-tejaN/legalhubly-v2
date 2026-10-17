@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { matchPracticeAreas } from "@/lib/practiceAreas";
+import { setPageMeta } from "@/lib/pageMeta";
 import { LAUNCH_CITY_LABEL } from "@/lib/location";
 import { shareLegalhubly } from "@/lib/shareReferral";
 import Logo from "@/components/Logo";
@@ -84,6 +85,15 @@ export default function Index() {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setPageMeta({
+      title: "Legalhubly — Find the Right Chicago Lawyer Faster",
+      description:
+        "Legalhubly is the AI-powered legal marketplace for Chicago. Describe your issue, get matched to verified lawyers instantly, then connect — free to start.",
+      path: "/",
+    });
   }, []);
 
   useEffect(() => {

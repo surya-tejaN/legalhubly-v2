@@ -32,6 +32,17 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
+    document.title = "Sign in | Legalhubly";
+    let robots = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.appendChild(robots);
+    }
+    robots.content = "noindex, nofollow";
+  }, []);
+
+  useEffect(() => {
     if (cooldown <= 0) return;
     const t = window.setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
     return () => window.clearInterval(t);

@@ -17,6 +17,7 @@ import BookConsultationDialog, { type BookableLawyer } from "@/components/BookCo
 import Logo from "@/components/Logo";
 import { rankLawyers } from "@/lib/lawyerRanking";
 import { isFeatureEnabled } from "@/config/features";
+import { setPageMeta } from "@/lib/pageMeta";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -220,27 +221,37 @@ function LawyerCard({
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-export default function FindLawyers() {
+type FindLawyersProps = {
+  /** When set (e.g. /chicago/:slug SEO landings), keep that practice area without redirecting. */
+  seoPracticeArea?: string;
+};
+
+export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
   const urlSort = searchParams.get("sort");
+  const urlQuery = searchParams.get("q") || "";
+  const urlMatched =
+    seoPracticeArea ||
+    searchParams.get("matched") ||
+    searchParams.get("practice") ||
+    "";
+  const matchedCategories = urlMatched
+    ? urlMatched.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
   const initialSort: SortKey =
     urlSort === "best_match" || urlSort === "rating" || urlSort === "experience" || urlSort === "review_count"
       ? urlSort
-      : searchParams.get("matched") || searchParams.get("practice") || searchParams.get("q")
+      : matchedCategories.length > 0 || urlQuery
         ? "best_match"
         : "rating";
   const [sortBy, setSortBy] = useState<SortKey>(initialSort);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [searchInput, setSearchInput] = useState("");
   const [bookLawyer, setBookLawyer] = useState<BookableLawyer | null>(null);
-
-  const urlQuery = searchParams.get("q") || "";
-  const urlMatched = searchParams.get("matched") || searchParams.get("practice") || "";
-  const matchedCategories = urlMatched ? urlMatched.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
   // Load saved lawyer IDs
   useEffect(() => {
@@ -353,10 +364,31 @@ export default function FindLawyers() {
   }, [filtered, sortBy, matchedCategories, urlQuery, searchInput]);
 
   const pageTitle = matchedCategories.length === 1
-    ? `${matchedCategories[0]} Lawyers`
+    ? seoPracticeArea
+      ? `Chicago ${matchedCategories[0]} Lawyers`
+      : `${matchedCategories[0]} Lawyers`
     : urlQuery
     ? `Results for "${urlQuery}"`
     : "All Lawyers";
+
+  useEffect(() => {
+    if (seoPracticeArea) return; // PracticeAreaPage owns meta
+    const title =
+      matchedCategories.length === 1
+        ? `${matchedCategories[0]} Lawyers in Chicago | Legalhubly`
+        : urlQuery
+          ? `Chicago lawyers for “${urlQuery.slice(0, 60)}” | Legalhubly`
+          : "Find Chicago Lawyers | Legalhubly";
+    const description =
+      matchedCategories.length === 1
+        ? `Browse verified Chicago ${matchedCategories[0]} attorneys on Legalhubly. Ratings, profiles, and websites — free to start.`
+        : "Search verified Chicago lawyers by practice area. AI matching on Legalhubly — free to start.";
+    setPageMeta({
+      title,
+      description,
+      path: "/client/find-lawyers",
+    });
+  }, [seoPracticeArea, urlMatched, urlQuery]);
 
   return (
     <div className="min-h-screen bg-background">

@@ -81,6 +81,17 @@ export default function Signup() {
   }, []);
 
   useEffect(() => {
+    document.title = "Create account | Legalhubly";
+    let robots = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.appendChild(robots);
+    }
+    robots.content = "noindex, nofollow";
+  }, []);
+
+  useEffect(() => {
     if (resendIn <= 0) return;
     const t = window.setTimeout(() => setResendIn((s) => s - 1), 1000);
     return () => window.clearTimeout(t);
