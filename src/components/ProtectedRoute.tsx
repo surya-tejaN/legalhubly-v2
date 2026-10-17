@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth, useDashboardPath, type AppRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { safeInternalPath } from "@/lib/safeRedirect";
 
 interface Props {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface Props {
 
 export default function ProtectedRoute({ children, allowedRoles }: Props) {
   const { user, profile, loading, signOut } = useAuth();
+  const location = useLocation();
   const fallback = useDashboardPath(profile?.role);
   const [profileWaitMs, setProfileWaitMs] = useState(0);
 
@@ -32,7 +34,9 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const from = safeInternalPath(`${location.pathname}${location.search}`, "/");
+    const q = from !== "/" ? `?from=${encodeURIComponent(from)}` : "";
+    return <Navigate to={`/login${q}`} replace />;
   }
 
   // Wait for profile before enforcing roles — escape after 8s if row missing

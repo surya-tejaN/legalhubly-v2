@@ -1291,6 +1291,10 @@ export type Database = {
         Args: { requested: string }
         Returns: "client" | "lawyer" | "firm_admin" | "platform_admin"
       }
+      create_direct_conversation: {
+        Args: { p_other_user_id: string }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

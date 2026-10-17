@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeadersFor } from "../_shared/cors.ts";
+import { corsHeadersFor, isOriginAllowed } from "../_shared/cors.ts";
 
 const MAX_GENERATE_PER_HOUR = 5;
 const MAX_VERIFY_ATTEMPTS = 5;
@@ -110,6 +110,10 @@ Deno.serve(async (req) => {
 
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405, req);
+  }
+
+  if (!isOriginAllowed(req)) {
+    return json({ error: "Origin not allowed" }, 403, req);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");

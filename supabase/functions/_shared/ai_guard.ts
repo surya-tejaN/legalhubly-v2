@@ -63,8 +63,8 @@ export async function guardAiRequest(
     });
 
     if (rlError) {
-      // If migration not applied yet, log and continue (fail open once) — prefer fail closed after deploy.
       logError({ fn: functionName, requestId, event: "rate_limit_rpc_error", error: rlError.message });
+      return jsonError(corsHeaders, requestId, 503, "AI temporarily unavailable. Please try again shortly.");
     } else if (rl && rl.allowed === false) {
       const retry = Number(rl.retry_after_seconds) || 60;
       logInfo({

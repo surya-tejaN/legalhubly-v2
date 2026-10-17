@@ -237,8 +237,22 @@ function AnimatedRoutes() {
             }
           />
 
-          <Route path="/firm/dashboard" element={page(<ComingSoon />)} />
-          <Route path="/admin/dashboard" element={page(<ComingSoon />)} />
+          <Route
+            path="/firm/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["firm_admin", "platform_admin"]}>
+                {page(<ComingSoon />)}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["platform_admin"]}>
+                {page(<ComingSoon />)}
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="*" element={page(<NotFound />)} />
         </Routes>

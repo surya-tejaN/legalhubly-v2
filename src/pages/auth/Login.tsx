@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useDashboardPath } from "@/contexts/AuthContext";
 import { setRememberPreference } from "@/lib/authStorage";
 import { consumeOAuthRedirectError, startOAuthLogin } from "@/lib/oauth";
 import { isFeatureEnabled } from "@/config/features";
+import { safeInternalPath } from "@/lib/safeRedirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,9 @@ import Logo from "@/components/Logo";
 
 export default function Login() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const dashboardPath = useDashboardPath(profile?.role);
+  const postLoginPath = safeInternalPath(searchParams.get("from"), dashboardPath);
   const showOAuth = isFeatureEnabled("authGoogleApple");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,7 +62,16 @@ export default function Login() {
   }, [user, profile, loading]);
 
   // Wait for profile so lawyer/admin don't flash into client dashboard
-  if (!loading && user && profile) return <Navigate to={dashboardPath} replace />;
+  if (!loading && user && profile) {
+    const dest =
+      postLoginPath.startsWith("/client") ||
+      postLoginPath.startsWith("/lawyer") ||
+      postLoginPath.startsWith("/firm") ||
+      postLoginPath.startsWith("/admin")
+        ? postLoginPath
+        : dashboardPath;
+    return <Navigate to={dest} replace />;
+  }
   if (!loading && user && !profile) {
     if (profileWaitMs > 8000) {
       return (
