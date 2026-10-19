@@ -6,7 +6,7 @@ import { guardAiRequest, jsonError } from "../_shared/ai_guard.ts";
 import { logError, logInfo } from "../_shared/log.ts";
 import {
   MATCH_COACH_TOOLS,
-  inferPracticeArea,
+  inferPracticeTriage,
   runMatchTool,
   wantsLawyerMatch,
 } from "../_shared/match_tools.ts";
@@ -197,14 +197,15 @@ serve(async (req) => {
       {
         role: "system",
         content: SUPPORT_SYSTEM_PROMPT +
-          "\n\nTOOLS: Call search_chicago_lawyers with limit 10 in Match Mode. When directory results are in context, you MUST list up to the top 10 lawyers by name with profile paths (numbered 1–10). Never invent names. Never answer Match Mode with only Find Lawyers CTAs.",
+          "\n\nTOOLS: Call search_chicago_lawyers with limit 10 in Match Mode. When directory results are in context, you MUST list up to the top 10 lawyers by name with profile paths (numbered 1–10). Never invent names. Never answer Match Mode with only Find Lawyers CTAs. Use advanced legal triage: primary area + optional secondary mention — still no legal advice.",
       },
       ...messages,
     ];
 
     // Pre-fetch top 10 so names always appear even if the model skips tool_calls
     if (matchMode) {
-      const area = inferPracticeArea(userText);
+      const triage = inferPracticeTriage(userText);
+      const area = triage.primary;
       const prefetched = await runMatchTool(
         serviceClient,
         "search_chicago_lawyers",
@@ -221,19 +222,32 @@ serve(async (req) => {
       } catch {
         resultCount = 0;
       }
+      const secondaryLine = triage.secondary
+        ? `(optional) One short clause naming related area **${triage.secondary}** if relevant — do not list a second full lawyer set unless user asks.\n`
+        : "";
       working.push({
         role: "system",
         content:
           `Practice area/department MUST be "${area}" (do not substitute Civil Litigation unless that is the area).\n` +
+          secondaryLine +
           `Top Chicago directory results (${resultCount} lawyers — use these exact names/paths only):\n${prefetched}\n\n` +
           `REQUIRED reply format:\n` +
-          `(1) One line confirming department: **${area}**\n` +
+          `(1) One line confirming department: **${area}** (+ secondary if noted)\n` +
           `(2) Numbered list with EVERY lawyer in the JSON (all ${resultCount}, max 10) — each line: Name — Firm — ★rating — short why_match — profile_path\n` +
-          `(3) CTA: /client/find-lawyers?matched=${encodeURIComponent(area)}\n` +
-          `(4) One-line disclaimer: general info only — not legal advice.\n` +
+          `(3) Optional one prep tip: documents to gather (not strategy)\n` +
+          `(4) CTA: /client/find-lawyers?matched=${encodeURIComponent(area)}\n` +
+          `(5) One-line disclaimer: general info only — not legal advice.\n` +
           `Do not stop after 2–3 names. Do not invent lawyers.`,
       });
-      logInfo({ fn: FN, requestId, event: "prefetch_lawyers", area, matchMode: true, resultCount });
+      logInfo({
+        fn: FN,
+        requestId,
+        event: "prefetch_lawyers",
+        area,
+        secondary: triage.secondary || null,
+        matchMode: true,
+        resultCount,
+      });
     }
 
     // Tool loop (non-streaming), then stream final answer
@@ -246,7 +260,7 @@ serve(async (req) => {
         tool_choice: forceSearch
           ? { type: "function", function: { name: "search_chicago_lawyers" } }
           : "auto",
-        temperature: 0.3,
+        temperature: 0.25,
         stream: false,
       });
 
@@ -331,8 +345,8 @@ serve(async (req) => {
       model: AI_MODEL,
       messages: working,
       stream: true,
-      temperature: 0.35,
-      presence_penalty: 0.1,
+      temperature: 0.28,
+      presence_penalty: 0.05,
     });
 
     if (!streamRes.ok) {
