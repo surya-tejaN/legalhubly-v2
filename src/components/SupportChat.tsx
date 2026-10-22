@@ -26,7 +26,12 @@ import { isFeatureEnabled } from "@/config/features";
 import { cn } from "@/lib/utils";
 
 const WELCOME =
-  "I’m your Legalhubly Match Coach for Chicago — trained on Illinois/Chicago legal triage to map your issue to the right practice area and top lawyers.\n\n1) Describe your situation in plain language\n2) I’ll triage the department (and related area if needed) + up to 10 Chicago lawyers\n3) Connect — profiles, website, or message\n\nI help you find counsel — I don’t give legal advice. Online booking is coming soon.\n\nVoice replies are off by default — tap the speaker icon if you want them read aloud.";
+  "I’m your Legalhubly Match Coach for Chicago — trained on Illinois/Chicago legal triage to map your issue to the right practice area and top lawyers.\n\n1) Describe your situation in plain language\n2) I’ll triage the department (and related area if needed) + up to 10 Chicago lawyers\n3) Connect — profiles, website, or message\n\nI help you find counsel — I don’t give legal advice. Online booking is coming soon.";
+
+/** Drop the old voice-hint line from saved chats. */
+function withoutVoiceHint(text: string) {
+  return text.replace(/\n*Voice replies are off by default[^\n]*/gi, "").trim();
+}
 
 /** Turn URLs and app paths into clickable links (stays on current origin). */
 function ChatText({ text }: { text: string }) {
@@ -423,7 +428,10 @@ export default function SupportChat() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-            {messages.map((m, i) => (
+            {messages.map((m, i) => {
+              const text = withoutVoiceHint(m.content);
+              if (!text && !m.imageUrl && !(busy && i === messages.length - 1)) return null;
+              return (
               <div
                 key={`${m.role}-${i}`}
                 className={cn(
@@ -440,11 +448,12 @@ export default function SupportChat() {
                     className="mb-2 max-h-40 rounded-lg border border-black/10 object-cover w-full"
                   />
                 )}
-                {m.content
-                  ? <ChatText text={m.content} />
+                {text
+                  ? <ChatText text={text} />
                   : (busy && i === messages.length - 1 ? "…" : "")}
               </div>
-            ))}
+              );
+            })}
 
             {!user && (
               <div className="rounded-xl border border-border bg-card px-3 py-2.5 text-xs text-muted-foreground space-y-2">
