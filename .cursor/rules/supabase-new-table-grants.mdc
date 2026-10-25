@@ -1,0 +1,28 @@
+---
+description: New Supabase tables need explicit GRANTs (Supabase stops auto-exposing public tables on 2026-10-30)
+globs: supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# Explicit grants for new tables
+
+From 2026-10-30 Supabase no longer auto-grants `anon` / `authenticated` / `service_role`
+on new tables in `public`. Without a grant, `supabase-js` gets
+`42501 permission denied for table ...`. Existing tables keep their grants.
+
+Every migration that creates a table in `public` must, right after `CREATE TABLE`:
+
+1. Enable RLS and add policies (unchanged).
+2. Grant only the privileges the app actually uses — never blanket-grant everything.
+3. Grant sequence usage if the table has a serial/identity column the client inserts into.
+
+```sql
+create table public.case_documents (...);
+alter table public.case_documents enable row level security;
+
+grant select, insert, update, delete on public.case_documents to authenticated;
+grant select, insert, update, delete on public.case_documents to service_role;
+-- grant select on public.case_documents to anon;  -- only if logged-out visitors read it
+```
+
+Edge functions using the service-role key still need the `service_role` grant.
