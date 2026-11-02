@@ -25,6 +25,14 @@ export const MATCH_COACH_TOOLS = [
             minimum: 1,
             maximum: 10,
           },
+          language: {
+            type: "string",
+            description: "Preferred language the client wants to speak with the lawyer (e.g. Spanish, Polish). Ranks speakers first; never excludes.",
+          },
+          budget_sensitive: {
+            type: "boolean",
+            description: "True when the client mentions cost limits — ranks free / low consultation fees first.",
+          },
         },
         required: ["practice_area"],
       },
@@ -40,11 +48,19 @@ export const MATCH_COACH_TOOLS = [
   },
 ] as const;
 
-export type PracticeTriage = { primary: string; secondary?: string };
+export type PracticeTriage = { primary: string; secondary?: string; fallback?: boolean };
 
 /** Heuristic practice-area guess aligned with TRAINING gold labels. */
 export function inferPracticeTriage(text: string): PracticeTriage {
   const t = text.toLowerCase();
+
+  // Common Chicago Spanish phrasings
+  if (/(inmigraci|deportaci|asilo\b|residencia permanente)/.test(t)) return { primary: "Immigration Law" };
+  if (/(divorcio|custodia|manutenci[oó]n)/.test(t)) return { primary: "Family Law" };
+  if (/(accidente|choque|lesi[oó]n)/.test(t)) return { primary: "Personal Injury" };
+  if (/(desalojo|casero|arrendador|dep[oó]sito de seguridad)/.test(t)) return { primary: "Landlord Tenant" };
+  if (/(me despidieron|despido|salario|mi jefe)/.test(t)) return { primary: "Employment Law" };
+  if (/(arrestad[oa]|me arrestaron|cargos criminales)/.test(t)) return { primary: "Criminal Defense" };
 
   // Immigration
   if (
@@ -157,11 +173,82 @@ export function inferPracticeTriage(text: string): PracticeTriage {
     return { primary: "Civil Litigation" };
   }
 
-  return { primary: "Civil Litigation" };
+  return { primary: "Civil Litigation", fallback: true };
 }
 
 export function inferPracticeArea(text: string): string {
   return inferPracticeTriage(text).primary;
+}
+
+/** Latest message wins; earlier user turns fill in when the latest has no legal signal. */
+export function inferTriageFromConversation(userTexts: string[]): PracticeTriage {
+  const latest = userTexts[userTexts.length - 1] || "";
+  const direct = inferPracticeTriage(latest);
+  if (!direct.fallback || userTexts.length < 2) return direct;
+  return inferPracticeTriage(userTexts.slice(-4).join(" \n "));
+}
+
+export function isFollowUpMatchRequest(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t || t.length > 60) return false;
+  return /^(yes|yeah|yep|ya|ok|okay|sure|please|pls|go ahead|do it|show (me )?(them|lawyers|more|options)|find (me )?(one|a lawyer|lawyers|someone)|more|next|who should i (call|contact)|s[ií]|por favor)\b/.test(t);
+}
+
+export type Urgency = { level: "emergency" | "time_sensitive"; reasons: string[] } | null;
+
+export function detectUrgency(text: string): Urgency {
+  const t = text.toLowerCase();
+  const emergency: string[] = [];
+  if (/\b(kill myself|suicid\w*|end my life|want to die|hurt myself)\b/.test(t)) emergency.push("self_harm");
+  if (
+    /\b(hitting|beating|choking|strangl\w*|attacking|threatening to kill|going to kill|has a gun|with a knife)\b/.test(t) ||
+    /\b(in danger|not safe|unsafe) (right now|at home|tonight)\b/.test(t)
+  ) {
+    emergency.push("physical_danger");
+  }
+  if (emergency.length) return { level: "emergency", reasons: emergency };
+
+  const urgent: string[] = [];
+  if (/\b(court|hearing|trial)\b.{0,25}\b(today|tomorrow|this week|monday|tuesday|wednesday|thursday|friday)\b/.test(t)) {
+    urgent.push("court_date_soon");
+  }
+  if (/\b(detained|in custody|in jail|locked up|ice (took|picked up|detained|arrested))\b/.test(t)) {
+    urgent.push("custody_or_detention");
+  }
+  if (/\b(eviction notice|\d+-?day notice|summons|served (with )?(papers|a lawsuit)|sheriff)\b/.test(t)) {
+    urgent.push("notice_served");
+  }
+  if (/\b(deadline|statute of limitations|running out of time|expires? (today|tomorrow|soon))\b/.test(t)) {
+    urgent.push("deadline_mentioned");
+  }
+  return urgent.length ? { level: "time_sensitive", reasons: urgent } : null;
+}
+
+const LANGUAGE_PATTERNS: Array<[string, RegExp]> = [
+  ["Spanish", /\b(spanish|espa[ñn]ol|abogad[oa]s?|necesito|ayuda|tengo un|mi (esposo|esposa|casero|jefe))\b/],
+  ["Polish", /\b(polish|polski|prawnik)\b/],
+  ["Chinese", /\b(chinese|mandarin|cantonese)\b/],
+  ["Arabic", /\b(arabic)\b/],
+  ["Hindi", /\b(hindi)\b/],
+  ["Urdu", /\b(urdu)\b/],
+  ["Korean", /\b(korean)\b/],
+  ["Tagalog", /\b(tagalog|filipino)\b/],
+  ["Russian", /\b(russian)\b/],
+  ["Ukrainian", /\b(ukrainian)\b/],
+  ["Vietnamese", /\b(vietnamese)\b/],
+  ["French", /\b(french)\b/],
+  ["Gujarati", /\b(gujarati)\b/],
+  ["Telugu", /\b(telugu)\b/],
+];
+
+export type ClientPreferences = { language?: string; budgetSensitive: boolean };
+
+export function detectPreferences(text: string): ClientPreferences {
+  const t = text.toLowerCase();
+  const language = LANGUAGE_PATTERNS.find(([, re]) => re.test(t))?.[0];
+  const budgetSensitive =
+    /\b(free consult\w*|cheap|afford|low[- ]cost|low income|no money|pro bono|can'?t pay|broke|budget|legal aid|sin dinero|gratis)\b/.test(t);
+  return { language, budgetSensitive };
 }
 
 export function wantsLawyerMatch(text: string): boolean {
@@ -208,12 +295,14 @@ export async function runMatchTool(
     const practiceArea = typeof args.practice_area === "string" ? args.practice_area.trim() : "";
     const query = typeof args.query === "string" ? args.query.trim() : "";
     const limit = Math.min(10, Math.max(1, Number(args.limit) || 10));
+    const language = typeof args.language === "string" ? args.language.trim().toLowerCase() : "";
+    const budgetSensitive = args.budget_sensitive === true;
 
     const fetchRows = async (area: string) => {
       let q = serviceClient
         .from("lawyers")
         .select(
-          "id, name, firm, practice_areas, rating, review_count, experience_years, availability_status, short_description, website_url, consultation_fee, verified",
+          "id, name, firm, practice_areas, rating, review_count, experience_years, availability_status, short_description, website_url, consultation_fee, verified, languages",
         )
         .eq("city", "Chicago")
         .order("rating", { ascending: false })
@@ -300,6 +389,21 @@ export async function runMatchTool(
         score += 6;
         why.push("Actively listed");
       }
+      const speaks = (l.languages || []).find((x: string) => x.toLowerCase() === language);
+      if (language && speaks) {
+        score += 20;
+        why.unshift(`Speaks ${speaks}`);
+      }
+      const fee = l.consultation_fee == null ? null : Number(l.consultation_fee);
+      if (budgetSensitive && fee !== null) {
+        if (fee === 0) {
+          score += 12;
+          why.unshift("Free consultation");
+        } else if (fee <= 100) {
+          score += 6;
+          why.push(`$${fee} consultation`);
+        }
+      }
       score = Math.min(100, Math.round(score));
       if (!why.length) why.push("Chicago directory match");
       return { l, score, why };
@@ -319,6 +423,7 @@ export async function runMatchTool(
       short_description: l.short_description,
       website_url: l.website_url,
       consultation_fee: l.consultation_fee,
+      languages: l.languages,
       match_score: score,
       why_match: why.slice(0, 3),
       profile_path: `/client/lawyer/${l.id}`,
@@ -333,6 +438,10 @@ export async function runMatchTool(
     return JSON.stringify({
       count: lawyers.length,
       practice_area: practiceArea || null,
+      language_requested: language || null,
+      language_matches: language
+        ? lawyers.filter((l) => (l.languages || []).some((x: string) => x.toLowerCase() === language)).length
+        : null,
       lawyers,
       instruction:
         lawyers.length > 0

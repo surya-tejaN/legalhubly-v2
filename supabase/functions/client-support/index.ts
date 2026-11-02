@@ -6,8 +6,13 @@ import { guardAiRequest, jsonError } from "../_shared/ai_guard.ts";
 import { logError, logInfo } from "../_shared/log.ts";
 import {
   MATCH_COACH_TOOLS,
+  detectPreferences,
+  detectUrgency,
   inferPracticeTriage,
+  inferTriageFromConversation,
+  isFollowUpMatchRequest,
   runMatchTool,
+  type Urgency,
   wantsLawyerMatch,
 } from "../_shared/match_tools.ts";
 
@@ -66,16 +71,39 @@ function toOpenAiMessage(m: IncomingMsg): ChatMsg | null {
   return { role: "user", content: text };
 }
 
-function lastUserText(messages: ChatMsg[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i];
-    if (m.role !== "user") continue;
-    if (typeof m.content === "string") return m.content;
-    if (Array.isArray(m.content)) {
-      return m.content.filter((p) => p.type === "text").map((p) => (p as { text: string }).text).join(" ");
-    }
+function messageText(m: ChatMsg): string {
+  if (typeof m.content === "string") return m.content;
+  if (Array.isArray(m.content)) {
+    return m.content.filter((p) => p.type === "text").map((p) => (p as { text: string }).text).join(" ");
   }
   return "";
+}
+
+function userTexts(messages: ChatMsg[]): string[] {
+  return messages.filter((m) => m.role === "user").map(messageText).filter(Boolean);
+}
+
+function urgencyInstruction(urgency: Urgency): string {
+  if (!urgency) return "";
+  if (urgency.level === "emergency") {
+    const lines = [
+      "SAFETY FIRST — the user may be in danger. Start the reply with these lines before anything else:",
+      "- If you are in immediate danger, call **911** now.",
+    ];
+    if (urgency.reasons.includes("self_harm")) {
+      lines.push("- Call or text **988** (Suicide & Crisis Lifeline) — free, 24/7.");
+    }
+    if (urgency.reasons.includes("physical_danger")) {
+      lines.push("- Illinois Domestic Violence Hotline: **1-877-863-6338** (24/7, confidential).");
+    }
+    lines.push("Be warm and brief. Then offer lawyer matches only if the user's message also describes a legal issue.");
+    return lines.join("\n");
+  }
+  return (
+    `TIME-SENSITIVE (${urgency.reasons.join(", ")}): add one line right after the department line — ` +
+    `"This sounds time-sensitive — contact a lawyer as soon as possible and don't miss any court date or notice deadline." ` +
+    `Do NOT state or guess specific deadlines or day counts.`
+  );
 }
 
 async function ensureSession(
@@ -175,7 +203,8 @@ serve(async (req) => {
     const incomingSessionId = typeof body?.sessionId === "string" ? body.sessionId : null;
     const lastUser = rawMessages.filter((m) => m.role === "user").pop();
     const hasImage = Boolean(lastUser?.imageUrl);
-    const userText = lastUserText(messages);
+    const history = userTexts(messages);
+    const userText = history[history.length - 1] || "";
 
     let sessionId: string | null = null;
     try {
@@ -192,7 +221,11 @@ serve(async (req) => {
 
     const { apiKey: AI_API_KEY, url: AI_CHAT_URL, model: AI_MODEL } = getAiChatEnv();
 
-    const matchMode = wantsLawyerMatch(userText);
+    const earlierWantedMatch = history.slice(0, -1).some(wantsLawyerMatch);
+    const matchMode = wantsLawyerMatch(userText) ||
+      (isFollowUpMatchRequest(userText) && earlierWantedMatch);
+    const urgency = detectUrgency(history.slice(-2).join(" \n "));
+    const prefs = detectPreferences(history.slice(-4).join(" \n "));
     const working: ChatMsg[] = [
       {
         role: "system",
@@ -202,14 +235,24 @@ serve(async (req) => {
       ...messages,
     ];
 
+    const urgencyNote = urgencyInstruction(urgency);
+    if (urgencyNote) working.push({ role: "system", content: urgencyNote });
+
     // Pre-fetch top 10 so names always appear even if the model skips tool_calls
     if (matchMode) {
-      const triage = inferPracticeTriage(userText);
+      const triage = inferTriageFromConversation(history);
       const area = triage.primary;
+      const searchQuery = (triage.fallback ? userText : history.slice(-2).join(" ")).slice(0, 120);
       const prefetched = await runMatchTool(
         serviceClient,
         "search_chicago_lawyers",
-        JSON.stringify({ practice_area: area, query: userText.slice(0, 80), limit: 10 }),
+        JSON.stringify({
+          practice_area: area,
+          query: searchQuery,
+          limit: 10,
+          language: prefs.language,
+          budget_sensitive: prefs.budgetSensitive,
+        }),
       );
       let resultCount = 0;
       try {
@@ -225,11 +268,19 @@ serve(async (req) => {
       const secondaryLine = triage.secondary
         ? `(optional) One short clause naming related area **${triage.secondary}** if relevant — do not list a second full lawyer set unless user asks.\n`
         : "";
+      const languageLine = prefs.language
+        ? `Client prefers **${prefs.language}**. Lawyers whose "languages" include it are ranked first — say "speaks ${prefs.language}" on those lines. If language_matches is 0, say so honestly and still list the best matches. Never claim a lawyer speaks a language not in their "languages" field.\n`
+        : "";
+      const budgetLine = prefs.budgetSensitive
+        ? `Client is cost-conscious: point out free/low consultation_fee listings (only from the JSON), and add one line: "Free help: Illinois Legal Aid Online — illinoislegalaid.org." Never invent fees.\n`
+        : "";
       working.push({
         role: "system",
         content:
           `Practice area/department MUST be "${area}" (do not substitute Civil Litigation unless that is the area).\n` +
           secondaryLine +
+          languageLine +
+          budgetLine +
           `Top Chicago directory results (${resultCount} lawyers — use these exact names/paths only):\n${prefetched}\n\n` +
           `REQUIRED reply format:\n` +
           `(1) One line confirming department: **${area}** (+ secondary if noted)\n` +
@@ -245,6 +296,10 @@ serve(async (req) => {
         event: "prefetch_lawyers",
         area,
         secondary: triage.secondary || null,
+        fromHistory: !triage.fallback && Boolean(inferPracticeTriage(userText).fallback),
+        language: prefs.language || null,
+        budgetSensitive: prefs.budgetSensitive,
+        urgency: urgency?.level || null,
         matchMode: true,
         resultCount,
       });

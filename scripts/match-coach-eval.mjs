@@ -1,84 +1,18 @@
 /**
- * Offline practice-area training checks for Match Coach heuristics.
- * Keep in sync with supabase/functions/_shared/match_tools.ts inferPracticeTriage.
- * Run: node scripts/match-coach-eval.mjs
+ * Offline checks for Match Coach heuristics — imports the real edge-function code.
+ * Run: node scripts/match-coach-eval.mjs   (Node 22.18+ for .ts type stripping)
  */
+import {
+  detectPreferences,
+  detectUrgency,
+  inferPracticeArea,
+  inferTriageFromConversation,
+  isFollowUpMatchRequest,
+  wantsLawyerMatch,
+} from "../supabase/functions/_shared/match_tools.ts";
+import { TRAINING_VERSION } from "../supabase/functions/_shared/support_training.ts";
 
-function inferPracticeArea(text) {
-  const t = text.toLowerCase();
-
-  if (
-    /\b(visa|green card|asylum|immigration|deport|h-?1b|uscis|daca|removal proceeding|u-?visa|vawa)\b/.test(t) ||
-    /\bice (detention|hold|raid)\b/.test(t)
-  ) {
-    return "Immigration Law";
-  }
-  if (
-    /\b(divorce|custody|child support|dcfs|alimony|spouse|prenup|adoption|guardianship|order of protection)\b/.test(t)
-  ) {
-    return "Family Law";
-  }
-  if (/\b(court-?martial|military justice|ucmj|va benefits)\b/.test(t)) return "Military Law";
-  const hasCriminalSignal =
-    /\b(arrested|warrant|felony|misdemeanor|was charged|bail|assault|domestic battery)\b/.test(t) ||
-    (/\barrest\b/.test(t) && !/\bno arrest\b/.test(t));
-  if (hasCriminalSignal) return "Criminal Defense";
-  if (/\bdui\b/.test(t) && !/\bticket only\b/.test(t)) return "Criminal Defense";
-  if (/\b(ticket|traffic|speeding|red light|camera ticket)\b/.test(t) && !/\bdui\b/.test(t)) {
-    return "Traffic Violations";
-  }
-  if (
-    /\b(medical malpractice|surgical error|hospital negligence|birth injury|botched surgery|messed up my surgery|misdiagnosis|doctor (errored|negligent))\b/.test(t) ||
-    (/\b(surgery|surgeon|hospital)\b/.test(t) && /\b(messed up|malpractice|negligence|error)\b/.test(t))
-  ) {
-    return "Medical Malpractice";
-  }
-  if (
-    /\b(injury|injur|car crash|accident|accidnet|acident|accidents|slip|fall|hurt|rear-?ended|broke my|whiplash|car wreck|hit by|hit and run|dog bite|workers?\s*comp)\b/.test(t) ||
-    /\baccid/.test(t) ||
-    (/\b(crash|wreck|collision)\b/.test(t) && !/\b(plane|stock|data)\b/.test(t))
-  ) {
-    return "Personal Injury";
-  }
-  if (
-    /\b(fired|harassment|wage|employer|wrongful|overtime|discrimination|eeoc|non-?compete)\b/.test(t)
-  ) {
-    return "Employment Law";
-  }
-  if (/\b(evict|landlord|tenant|security deposit|rlto|lockout|no heat|mold)\b/.test(t)) {
-    return "Landlord Tenant";
-  }
-  if (/\b(will|trust|probate|estate planning|power of attorney)\b/.test(t)) {
-    return "Estate Planning";
-  }
-  if (/\b(irs|tax audit|tax debt)\b/.test(t)) return "Tax Law";
-  if (/\b(chapter\s*7|chapter\s*13|bankruptcy|foreclosure)\b/.test(t)) return "Bankruptcy";
-  if (/\b(condo|title|zoning|mortgage|closing|real estate|hoa|earnest money)\b/.test(t)) {
-    return "Real Estate Law";
-  }
-  if (/\b(patent|trademark|copyright|trade secret|\bip\b|logo)\b/.test(t)) {
-    return "Intellectual Property";
-  }
-  if (/\b(iep|title ix|504|student rights)\b/.test(t)) return "Education Law";
-  if (/\b(epa|pollution|environmental|brownfield)\b/.test(t)) return "Environmental Law";
-  if (/\b(ofac|sanctions|cross-border|international law|customs)\b/.test(t)) {
-    return "International Law";
-  }
-  if (/\b(refund|warranty|scam|recall|consumer|debt collector|debt collection)\b/.test(t)) {
-    return "Consumer Protection";
-  }
-  if (/\b(llc|startup|partnership|shareholder|business|non-?compete)\b/.test(t)) {
-    return "Business Law";
-  }
-  if (/\b(contract|partner dispute|unpaid invoice)\b/.test(t)) return "Business Law";
-  if (/\b(stolen|theft|thief|lost bag|lost property|purse stolen)\b/.test(t)) {
-    return "Civil Litigation";
-  }
-  if (/\b(lawsuit|sue|litigation|dispute|mediation|breach)\b/.test(t)) return "Civil Litigation";
-  return "Civil Litigation";
-}
-
-const CASES = [
+const AREA_CASES = [
   ["My spouse wants a divorce and we have two kids", "Family Law"],
   ["Custody battle with my ex", "Family Law"],
   ["I got a DUI last night in Chicago", "Criminal Defense"],
@@ -109,14 +43,49 @@ const CASES = [
   ["Court-martial / military justice issue", "Military Law"],
   ["EPA pollution permit problem for my business", "Environmental Law"],
   ["Cross-border sanctions / OFAC question", "International Law"],
+  ["Necesito un abogado de inmigración", "Immigration Law"],
+  ["Mi casero quiere un desalojo", "Landlord Tenant"],
+  ["Tuve un accidente de carro", "Personal Injury"],
 ];
 
-let pass = 0;
-for (const [user, expected] of CASES) {
+const CONVERSATION_CASES = [
+  [["My landlord won't return my deposit", "yes find me one"], "Landlord Tenant"],
+  [["I was rear-ended on Lake Shore Drive", "ok show me lawyers"], "Personal Injury"],
+  [["My wife filed for divorce", "My bag was stolen"], "Civil Litigation"],
+];
+
+const checks = [];
+const check = (ok, label) => checks.push([ok, label]);
+
+for (const [user, expected] of AREA_CASES) {
   const got = inferPracticeArea(user);
-  const ok = got === expected;
-  if (ok) pass++;
-  console.log(`${ok ? "PASS" : "FAIL"} | ${expected.padEnd(22)} | got=${got.padEnd(22)} | ${user}`);
+  check(got === expected, `area   | ${expected.padEnd(22)} | got=${got.padEnd(22)} | ${user}`);
 }
-console.log(`\nFINAL: ${pass}/${CASES.length} passed (training v2026-10-19.legal-triage-v2)`);
-process.exit(pass === CASES.length ? 0 : 1);
+for (const [turns, expected] of CONVERSATION_CASES) {
+  const got = inferTriageFromConversation(turns).primary;
+  check(got === expected, `memory | ${expected.padEnd(22)} | got=${got.padEnd(22)} | ${turns.join(" → ")}`);
+}
+
+check(isFollowUpMatchRequest("yes find me one"), "followup | 'yes find me one' is a follow-up");
+check(!isFollowUpMatchRequest("How do I change my password on the app?"), "followup | product FAQ is not a follow-up");
+check(wantsLawyerMatch("I was in a car accident"), "match    | accident triggers Match Mode");
+
+check(detectUrgency("My boyfriend is hitting me right now")?.level === "emergency", "urgency | abuse in progress → emergency");
+check(detectUrgency("I want to kill myself")?.reasons.includes("self_harm"), "urgency | self-harm → 988");
+check(detectUrgency("My court hearing is tomorrow")?.level === "time_sensitive", "urgency | hearing tomorrow → time-sensitive");
+check(detectUrgency("ICE detained my brother")?.level === "time_sensitive", "urgency | ICE detention → time-sensitive");
+check(detectUrgency("I got a 5-day notice from my landlord")?.level === "time_sensitive", "urgency | 5-day notice → time-sensitive");
+check(detectUrgency("I want to form an LLC") === null, "urgency | LLC → none");
+
+check(detectPreferences("I need a lawyer who speaks Spanish").language === "Spanish", "prefs | speaks Spanish");
+check(detectPreferences("Necesito un abogado").language === "Spanish", "prefs | Spanish text → Spanish");
+check(detectPreferences("I can't afford much, free consultation?").budgetSensitive, "prefs | budget-sensitive");
+check(!detectPreferences("Divorce lawyer in Chicago").budgetSensitive, "prefs | no budget signal");
+
+let pass = 0;
+for (const [ok, label] of checks) {
+  if (ok) pass++;
+  console.log(`${ok ? "PASS" : "FAIL"} | ${label}`);
+}
+console.log(`\nFINAL: ${pass}/${checks.length} passed (training v${TRAINING_VERSION})`);
+process.exit(pass === checks.length ? 0 : 1);
