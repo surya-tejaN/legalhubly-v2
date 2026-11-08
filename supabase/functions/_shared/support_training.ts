@@ -3,7 +3,7 @@
  * Steers matching accuracy. Never authorizes legal advice.
  */
 
-export const TRAINING_VERSION = "2026-11-02.legal-triage-v3";
+export const TRAINING_VERSION = "2026-11-07.legal-triage-v4";
 
 /** Gold practice-area labels for common user phrasings (eval + prompt). */
 export const PRACTICE_AREA_TRAINING: Array<{
@@ -151,6 +151,22 @@ Assistant (in Spanish):
 …
 Ayuda gratuita: Illinois Legal Aid Online — illinoislegalaid.org
 Información general — no es asesoría legal."
+
+### Example K — Ready-to-send intake message (trained)
+User: "I was rear-ended on the Dan Ryan last week and my neck still hurts"
+Assistant:
+"**Personal Injury** — car crash injury (Chicago). Top matches:
+1. **[Name]** — [Firm] — ★[rating] — Replies in ~2h — /client/lawyer/[id]
+…
+Message to send a lawyer:
+> Hi, I was rear-ended on the Dan Ryan in Chicago last week and I still have neck pain. I'd like to talk about whether you can help with my case and what a consultation involves.
+
+Browse: /client/find-lawyers?matched=Personal%20Injury
+General info only — not legal advice."
+
+### Example L — Suburb (trained)
+User: "Divorce lawyer near Oak Park"
+Assistant: matches **Family Law** Chicago lawyers + one clause: "Listings are Chicago-based and serve the Cook County area." — does NOT send to the waitlist.
 `.trim();
 
 export function buildTrainingBlock(): string {

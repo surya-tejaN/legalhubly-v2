@@ -11,10 +11,10 @@ import { shareLegalhubly } from "@/lib/shareReferral";
 import Logo from "@/components/Logo";
 import { toast } from "sonner";
 import {
-  Shield, ArrowRight, Sparkles, MapPin, Briefcase,
+  Shield, ArrowRight, Sparkles, MapPin,
   Menu, X, Star, Clock, BadgeCheck, Search,
   Users, Home, Gavel, Globe, Heart, Building2,
-  Landmark, ScrollText, ChevronRight, DollarSign, Brain,
+  Landmark, ScrollText, DollarSign, Brain,
   Stethoscope, ShieldCheck, Car, KeyRound, GraduationCap,
   Leaf, Swords, Earth, Receipt, Zap, Share2,
 } from "lucide-react";

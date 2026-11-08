@@ -286,8 +286,9 @@ serve(async (req) => {
           `(1) One line confirming department: **${area}** (+ secondary if noted)\n` +
           `(2) Numbered list with EVERY lawyer in the JSON (all ${resultCount}, max 10) — each line: Name — Firm — ★rating — short why_match — profile_path\n` +
           `(3) Optional one prep tip: documents to gather (not strategy)\n` +
-          `(4) CTA: /client/find-lawyers?matched=${encodeURIComponent(area)}\n` +
-          `(5) One-line disclaimer: general info only — not legal advice.\n` +
+          `(4) "Message to send a lawyer" — a 2–3 sentence first-person draft the client can paste into Message on a profile, using ONLY facts the user already gave (issue, Chicago, timing if stated). No legal conclusions, no invented facts, no SSNs/case numbers. Put it in a > quote block. Skip if the user gave fewer than one concrete fact.\n` +
+          `(5) CTA: /client/find-lawyers?matched=${encodeURIComponent(area)}\n` +
+          `(6) One-line disclaimer: general info only — not legal advice.\n` +
           `Do not stop after 2–3 names. Do not invent lawyers.`,
       });
       logInfo({

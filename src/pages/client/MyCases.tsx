@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { clientNavItems } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,14 +72,17 @@ function DocumentsTab() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const fetchDocs = async () => {
-    if (!user) return;
+  const fetchDocs = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase.from("documents").select("*").eq("owner_user_id", user.id).order("created_at", { ascending: false });
     setDocs(data || []);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchDocs(); }, [user]);
+  useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

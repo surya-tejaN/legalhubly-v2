@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Search, Menu, X, User, Sun, Moon, Scale } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Menu, User, Sun, Moon, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LogoMark } from "@/components/Logo";

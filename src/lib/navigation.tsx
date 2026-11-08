@@ -14,9 +14,10 @@ import {
   Wrench,
   User,
 } from "lucide-react";
+import type { ReactElement } from "react";
 import { features } from "@/config/features";
 
-type NavItem = { icon: JSX.Element; label: string; to: string };
+type NavItem = { icon: ReactElement; label: string; to: string };
 
 function filterEnabled(items: Array<NavItem & { enabled: boolean }>): NavItem[] {
   return items.filter((item) => item.enabled).map(({ icon, label, to }) => ({ icon, label, to }));

@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.18"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -603,7 +628,6 @@ export type Database = {
           avg_response_hours?: number
           bio?: string | null
           budget_ranges?: string[]
-          user_id?: string | null
           city?: string | null
           city_id?: string | null
           complexity_levels?: string[]
@@ -629,6 +653,7 @@ export type Database = {
           specialization_tags?: string[]
           state?: string | null
           updated_at?: string
+          user_id?: string | null
           verified?: boolean
           website_url?: string | null
         }
@@ -663,6 +688,7 @@ export type Database = {
           specialization_tags?: string[]
           state?: string | null
           updated_at?: string
+          user_id?: string | null
           verified?: boolean
           website_url?: string | null
         }
@@ -689,6 +715,7 @@ export type Database = {
           budget_range: string | null
           client_email: string | null
           client_name: string
+          client_user_id: string | null
           conflict_status: string
           created_at: string
           id: string
@@ -707,6 +734,7 @@ export type Database = {
           budget_range?: string | null
           client_email?: string | null
           client_name: string
+          client_user_id?: string | null
           conflict_status?: string
           created_at?: string
           id?: string
@@ -725,6 +753,7 @@ export type Database = {
           budget_range?: string | null
           client_email?: string | null
           client_name?: string
+          client_user_id?: string | null
           conflict_status?: string
           created_at?: string
           id?: string
@@ -760,6 +789,7 @@ export type Database = {
           case_number: string
           client_email: string | null
           client_name: string
+          client_user_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -779,6 +809,7 @@ export type Database = {
           case_number?: string
           client_email?: string | null
           client_name: string
+          client_user_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -798,6 +829,7 @@ export type Database = {
           case_number?: string
           client_email?: string | null
           client_name?: string
+          client_user_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -866,6 +898,7 @@ export type Database = {
         Row: {
           amount: number
           client_name: string
+          client_user_id: string | null
           created_at: string
           description: string | null
           due_date: string | null
@@ -878,6 +911,7 @@ export type Database = {
         Insert: {
           amount: number
           client_name: string
+          client_user_id?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -890,6 +924,7 @@ export type Database = {
         Update: {
           amount?: number
           client_name?: string
+          client_user_id?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -1046,6 +1081,48 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          ai_credits_monthly: number
+          commission_rate: number
+          created_at: string
+          features: Json
+          id: string
+          is_active: boolean
+          lead_fee: number
+          name: string
+          price_monthly: number
+          price_yearly: number
+          tier: string
+        }
+        Insert: {
+          ai_credits_monthly?: number
+          commission_rate?: number
+          created_at?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          lead_fee?: number
+          name: string
+          price_monthly?: number
+          price_yearly?: number
+          tier?: string
+        }
+        Update: {
+          ai_credits_monthly?: number
+          commission_rate?: number
+          created_at?: string
+          features?: Json
+          id?: string
+          is_active?: boolean
+          lead_fee?: number
+          name?: string
+          price_monthly?: number
+          price_yearly?: number
+          tier?: string
+        }
+        Relationships: []
+      }
       support_chat_messages: {
         Row: {
           content: string
@@ -1105,48 +1182,6 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      subscription_plans: {
-        Row: {
-          ai_credits_monthly: number
-          commission_rate: number
-          created_at: string
-          features: Json
-          id: string
-          is_active: boolean
-          lead_fee: number
-          name: string
-          price_monthly: number
-          price_yearly: number
-          tier: string
-        }
-        Insert: {
-          ai_credits_monthly?: number
-          commission_rate?: number
-          created_at?: string
-          features?: Json
-          id?: string
-          is_active?: boolean
-          lead_fee?: number
-          name: string
-          price_monthly?: number
-          price_yearly?: number
-          tier?: string
-        }
-        Update: {
-          ai_credits_monthly?: number
-          commission_rate?: number
-          created_at?: string
-          features?: Json
-          id?: string
-          is_active?: boolean
-          lead_fee?: number
-          name?: string
-          price_monthly?: number
-          price_yearly?: number
-          tier?: string
         }
         Relationships: []
       }
@@ -1289,7 +1324,17 @@ export type Database = {
     Functions: {
       apply_signup_role: {
         Args: { requested: string }
-        Returns: "client" | "lawyer" | "firm_admin" | "platform_admin"
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      check_ai_rate_limit: {
+        Args: {
+          p_function_name: string
+          p_max_per_day?: number
+          p_max_per_minute?: number
+          p_request_id?: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       create_direct_conversation: {
         Args: { p_other_user_id: string }
@@ -1299,11 +1344,15 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
-      email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      is_conversation_participant: {
+        Args: { conv_id: string }
+        Returns: boolean
+      }
+      is_platform_admin: { Args: never; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1313,6 +1362,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_lawyer_id: { Args: never; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1449,6 +1499,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["client", "lawyer", "firm_admin", "platform_admin"],

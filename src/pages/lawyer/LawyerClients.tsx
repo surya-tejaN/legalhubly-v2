@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, Briefcase, MessageSquare, Video, Calendar, Clock,
-  Loader2, Mail, AlertCircle, Send, User,
+  Loader2, Mail, Send, User,
 } from "lucide-react";
-import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { fetchMyLawyerId } from "@/lib/lawyerAccount";
 

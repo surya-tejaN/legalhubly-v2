@@ -302,7 +302,7 @@ export async function runMatchTool(
       let q = serviceClient
         .from("lawyers")
         .select(
-          "id, name, firm, practice_areas, rating, review_count, experience_years, availability_status, short_description, website_url, consultation_fee, verified, languages",
+          "id, name, firm, practice_areas, rating, review_count, experience_years, availability_status, short_description, website_url, consultation_fee, verified, languages, avg_response_hours",
         )
         .eq("city", "Chicago")
         .order("rating", { ascending: false })
@@ -389,6 +389,13 @@ export async function runMatchTool(
         score += 6;
         why.push("Actively listed");
       }
+      const responseHours = Number(l.avg_response_hours) || 0;
+      if (responseHours > 0 && responseHours <= 4) {
+        score += 6;
+        why.push(`Replies in ~${responseHours}h`);
+      } else if (responseHours > 0 && responseHours <= 12) {
+        score += 3;
+      }
       const speaks = (l.languages || []).find((x: string) => x.toLowerCase() === language);
       if (language && speaks) {
         score += 20;
@@ -424,6 +431,7 @@ export async function runMatchTool(
       website_url: l.website_url,
       consultation_fee: l.consultation_fee,
       languages: l.languages,
+      avg_response_hours: l.avg_response_hours,
       match_score: score,
       why_match: why.slice(0, 3),
       profile_path: `/client/lawyer/${l.id}`,

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { guardAiRequest, jsonError } from "../_shared/ai_guard.ts";
+import { guardAiRequest } from "../_shared/ai_guard.ts";
 import { logError, logInfo } from "../_shared/log.ts";
 
 const FN = "match-lawyers";
