@@ -195,7 +195,7 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
               Sign in to book a consultation with Chicago lawyers.
             </p>
             <Button variant="gold" className="w-full" asChild>
-              <Link to="/login">Sign in to book</Link>
+              <Link to={`/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`}>Sign in to book</Link>
             </Button>
           </div>
         ) : done ? (

@@ -118,7 +118,7 @@ export default function LawyerProfile() {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) {
       toast.error("Please sign in to message a lawyer");
-      navigate("/login");
+      navigate(`/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
     if (!lawyer?.user_id) {

@@ -76,7 +76,8 @@ export default function ClientMessages() {
     const channel = supabase
       .channel(`messages-${activeConvo}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${activeConvo}` }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as Message]);
+        const incoming = payload.new as Message;
+        setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
       })
       .subscribe();
@@ -87,13 +88,16 @@ export default function ClientMessages() {
   const handleSend = async () => {
     if (!newMessage.trim() || !activeConvo || !user) return;
     setSending(true);
-    const { error } = await supabase.from("messages").insert({
+    const { data: sent, error } = await supabase.from("messages").insert({
       conversation_id: activeConvo,
       sender_user_id: user.id,
       body: newMessage.trim(),
-    });
+    }).select("*").single();
     if (error) toast.error("Failed to send message");
-    else setNewMessage("");
+    else {
+      setNewMessage("");
+      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent as Message]));
+    }
     setSending(false);
   };
 

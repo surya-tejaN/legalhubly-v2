@@ -15,7 +15,7 @@ export default function VerifyEmailSuccess() {
     // Supabase handles the token exchange from the URL hash automatically
     // via onAuthStateChange. We just wait for the user to appear.
     const timeout = setTimeout(() => {
-      if (!user) setStatus("error");
+      setStatus((s) => (s === "verifying" ? "error" : s));
     }, 10000); // 10s timeout
 
     return () => clearTimeout(timeout);

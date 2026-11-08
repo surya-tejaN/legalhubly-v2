@@ -33,6 +33,10 @@ export const MATCH_COACH_TOOLS = [
             type: "boolean",
             description: "True when the client mentions cost limits — ranks free / low consultation fees first.",
           },
+          prefer_fast_response: {
+            type: "boolean",
+            description: "True when the client wants a quick reply — ranks lawyers with the lowest average response time first.",
+          },
         },
         required: ["practice_area"],
       },
@@ -241,14 +245,16 @@ const LANGUAGE_PATTERNS: Array<[string, RegExp]> = [
   ["Telugu", /\b(telugu)\b/],
 ];
 
-export type ClientPreferences = { language?: string; budgetSensitive: boolean };
+export type ClientPreferences = { language?: string; budgetSensitive: boolean; fastResponse: boolean };
 
 export function detectPreferences(text: string): ClientPreferences {
   const t = text.toLowerCase();
   const language = LANGUAGE_PATTERNS.find(([, re]) => re.test(t))?.[0];
   const budgetSensitive =
-    /\b(free consult\w*|cheap|afford|low[- ]cost|low income|no money|pro bono|can'?t pay|broke|budget|legal aid|sin dinero|gratis)\b/.test(t);
-  return { language, budgetSensitive };
+    /\b(free consult\w*|free consultation|cheap|afford|low[- ]cost|low income|no money|pro bono|can'?t pay|broke|budget|legal aid|sin dinero|gratis)\b/.test(t);
+  const fastResponse =
+    /\b(reply fastest|respond(s)? (fast|quickly)|fastest|quick(ly)? (reply|response)|asap|right away|today)\b/.test(t);
+  return { language, budgetSensitive, fastResponse };
 }
 
 export function wantsLawyerMatch(text: string): boolean {
@@ -256,11 +262,11 @@ export function wantsLawyerMatch(text: string): boolean {
   if (t.length < 8) return false;
   // Pure product FAQ — don't force search
   if (/^(how (do|does|can)|what is|explain|where is|help with (the )?app|sign ?up|login|book)/.test(t) &&
-      !/\b(lawyer|attorney|case|stolen|theft|divorce|arrest|visa)\b/.test(t)) {
+      !/\b(lawyers?|attorneys?|case|stolen|theft|divorce|arrest|visa)\b/.test(t)) {
     return false;
   }
   return (
-    /\b(lawyer|attorney|legal|sue|court|stolen|theft|lost|divorce|custody|arrest|visa|injury|injur|accident|accid|crash|wreck|fired|evict|help me|find|match|contact)\b/.test(t) ||
+    /\b(lawyers?|attorneys?|abogad[oa]s?|legal|sue|court|stolen|theft|lost|divorce|custody|arrest|visa|injury|injur|accident|accid|crash|wreck|fired|evict|help me|find|match|contact)\b/.test(t) ||
     t.split(/\s+/).length >= 6
   );
 }
@@ -297,6 +303,7 @@ export async function runMatchTool(
     const limit = Math.min(10, Math.max(1, Number(args.limit) || 10));
     const language = typeof args.language === "string" ? args.language.trim().toLowerCase() : "";
     const budgetSensitive = args.budget_sensitive === true;
+    const preferFast = args.prefer_fast_response === true;
 
     const fetchRows = async (area: string) => {
       let q = serviceClient
@@ -391,10 +398,11 @@ export async function runMatchTool(
       }
       const responseHours = Number(l.avg_response_hours) || 0;
       if (responseHours > 0 && responseHours <= 4) {
-        score += 6;
-        why.push(`Replies in ~${responseHours}h`);
+        score += preferFast ? 20 : 6;
+        if (preferFast) why.unshift(`Replies in ~${responseHours}h`);
+        else why.push(`Replies in ~${responseHours}h`);
       } else if (responseHours > 0 && responseHours <= 12) {
-        score += 3;
+        score += preferFast ? 8 : 3;
       }
       const speaks = (l.languages || []).find((x: string) => x.toLowerCase() === language);
       if (language && speaks) {

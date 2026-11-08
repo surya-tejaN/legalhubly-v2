@@ -70,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    // Latest signed-in user id; stale profile fetches for another user are dropped.
+    let currentUserId: string | null = null;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
@@ -77,12 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(newSession);
         setUser(newSession?.user ?? null);
+        currentUserId = newSession?.user?.id ?? null;
 
         if (newSession?.user) {
+          const uid = newSession.user.id;
           // Defer profile fetch to avoid auth deadlock on TOKEN_REFRESHED
           void Promise.resolve().then(async () => {
-            const p = await fetchProfile(newSession.user.id);
-            if (!active) return;
+            const p = await fetchProfile(uid);
+            if (!active || currentUserId !== uid) return;
             setProfile(p);
             setLoading(false);
           });
@@ -101,10 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setSession(existing);
       setUser(existing?.user ?? null);
+      if (currentUserId === null) currentUserId = existing?.user?.id ?? null;
 
       if (existing?.user) {
-        const p = await fetchProfile(existing.user.id);
-        if (!active) return;
+        const uid = existing.user.id;
+        const p = await fetchProfile(uid);
+        if (!active || currentUserId !== uid) return;
         setProfile(p);
       }
       setLoading(false);

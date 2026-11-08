@@ -12,6 +12,7 @@ import {
   Users, Briefcase, MessageSquare, Video, Calendar, Clock,
   Loader2, Mail, Send, User,
 } from "lucide-react";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { fetchMyLawyerId } from "@/lib/lawyerAccount";
 
@@ -172,7 +173,8 @@ function MessagesTab() {
       .then(({ data }) => { setMessages(data || []); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100); });
     const channel = supabase.channel(`lawyer-msgs-${activeConvo}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${activeConvo}` }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as any]);
+        const incoming = payload.new as any;
+        setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -181,8 +183,12 @@ function MessagesTab() {
   const handleSend = async () => {
     if (!newMessage.trim() || !activeConvo || !user) return;
     setSending(true);
-    await supabase.from("messages").insert({ conversation_id: activeConvo, sender_user_id: user.id, body: newMessage.trim() });
-    setNewMessage("");
+    const { data: sent, error } = await supabase.from("messages").insert({ conversation_id: activeConvo, sender_user_id: user.id, body: newMessage.trim() }).select("*").single();
+    if (error) toast.error("Failed to send");
+    else {
+      setNewMessage("");
+      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+    }
     setSending(false);
   };
 

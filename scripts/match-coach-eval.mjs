@@ -69,6 +69,14 @@ for (const [turns, expected] of CONVERSATION_CASES) {
 check(isFollowUpMatchRequest("yes find me one"), "followup | 'yes find me one' is a follow-up");
 check(!isFollowUpMatchRequest("How do I change my password on the app?"), "followup | product FAQ is not a follow-up");
 check(wantsLawyerMatch("I was in a car accident"), "match    | accident triggers Match Mode");
+check(wantsLawyerMatch("Find lawyers who reply fastest for this"), "match    | plural 'lawyers' triggers Match Mode");
+check(wantsLawyerMatch("need attorneys"), "match    | plural 'attorneys' triggers Match Mode");
+check(
+  inferTriageFromConversation(["My landlord kept my deposit", "Find lawyers with a free consultation for this"]).primary === "Landlord Tenant",
+  "memory | follow-up chip keeps Landlord Tenant",
+);
+check(detectPreferences("Find lawyers who reply fastest for this").fastResponse, "prefs | fastest → fast response");
+check(detectPreferences("Find lawyers with a free consultation for this").budgetSensitive, "prefs | free consultation chip → budget");
 
 check(detectUrgency("My boyfriend is hitting me right now")?.level === "emergency", "urgency | abuse in progress → emergency");
 check(detectUrgency("I want to kill myself")?.reasons.includes("self_harm"), "urgency | self-harm → 988");

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   MessageCircle, X, Send, Loader2, Mic, MicOff, Volume2, VolumeX,
-  ImagePlus, Trash2, Hand,
+  ImagePlus, Trash2, Hand, Copy, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,6 +88,82 @@ function ChatText({ text }: { text: string }) {
     </>
   );
 }
+
+/** Inline **bold** + links. */
+function InlineText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*\n]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^\*\*[^*\n]+\*\*$/.test(part)
+          ? <strong key={i} className="font-semibold"><ChatText text={part.slice(2, -2)} /></strong>
+          : <ChatText key={i} text={part} />,
+      )}
+    </>
+  );
+}
+
+function CopyableQuote({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="my-1.5 rounded-xl border border-accent/30 bg-background/70 px-3 py-2">
+      <p className="whitespace-pre-wrap italic text-foreground/90">{text}</p>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } catch {
+            setCopied(false);
+          }
+        }}
+        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        {copied ? "Copied" : "Copy message"}
+      </button>
+    </div>
+  );
+}
+
+/** Lightweight markdown for assistant replies: **bold**, links, and copyable > quotes. */
+function ChatMarkdown({ text }: { text: string }) {
+  const blocks: Array<{ quote: boolean; lines: string[] }> = [];
+  for (const line of text.split("\n")) {
+    const quote = /^\s*>\s?/.test(line);
+    const content = quote ? line.replace(/^\s*>\s?/, "") : line;
+    const last = blocks[blocks.length - 1];
+    if (last && last.quote === quote) last.lines.push(content);
+    else blocks.push({ quote, lines: [content] });
+  }
+  return (
+    <>
+      {blocks.map((b, i) =>
+        b.quote
+          ? <CopyableQuote key={i} text={b.lines.join("\n").trim()} />
+          : (
+            <span key={i}>
+              {b.lines.map((line, j) => (
+                <span key={j}>
+                  <InlineText text={line} />
+                  {j < b.lines.length - 1 ? "\n" : ""}
+                </span>
+              ))}
+              {i < blocks.length - 1 ? "\n" : ""}
+            </span>
+          ),
+      )}
+    </>
+  );
+}
+
+const MATCH_FOLLOW_UPS = [
+  { label: "Spanish-speaking", prompt: "Find Spanish-speaking lawyers for this" },
+  { label: "Free consultation", prompt: "Find lawyers with a free consultation for this" },
+  { label: "Fastest to reply", prompt: "Find lawyers who reply fastest for this" },
+];
 
 const QUICK_STARTS = [
   { label: "Describe my issue", prompt: "I need help finding a Chicago lawyer. Here’s my situation: " },
@@ -449,7 +525,7 @@ export default function SupportChat() {
                   />
                 )}
                 {text
-                  ? <ChatText text={text} />
+                  ? (m.role === "assistant" ? <ChatMarkdown text={text} /> : <ChatText text={text} />)
                   : (busy && i === messages.length - 1 ? "…" : "")}
               </div>
               );
@@ -482,6 +558,23 @@ export default function SupportChat() {
                         void send(q.prompt);
                       }
                     }}
+                    className="text-[11px] px-2.5 py-1.5 rounded-full border border-border bg-card text-foreground hover:border-accent/40 hover:bg-accent/5 transition-colors"
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {user && !busy && messages.length > 2 &&
+              messages[messages.length - 1]?.role === "assistant" &&
+              messages[messages.length - 1].content.includes("/client/lawyer/") && (
+              <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+                {MATCH_FOLLOW_UPS.map((q) => (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => void send(q.prompt)}
                     className="text-[11px] px-2.5 py-1.5 rounded-full border border-border bg-card text-foreground hover:border-accent/40 hover:bg-accent/5 transition-colors"
                   >
                     {q.label}

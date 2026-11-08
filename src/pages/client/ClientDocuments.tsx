@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { uploadUserDocument } from "@/lib/documents";
 import DashboardLayout from "@/components/DashboardLayout";
 import { clientNavItems } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,8 +27,11 @@ export default function ClientDocuments() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  const fetchDocs = async () => {
-    if (!user) return;
+  const fetchDocs = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("documents")
       .select("*")
@@ -35,31 +39,18 @@ export default function ClientDocuments() {
       .order("created_at", { ascending: false });
     setDocs(data || []);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchDocs(); }, [user]);
+  useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 10 * 1024 * 1024) { toast.error("Max 10MB"); return; }
-
     setUploading(true);
-    const path = `${user.id}/${Date.now()}-${file.name}`;
-    const { error: uploadErr } = await supabase.storage.from("documents").upload(path, file);
-    if (uploadErr) { toast.error("Upload failed"); setUploading(false); return; }
-
-    await supabase.from("documents").insert({
-      owner_user_id: user.id,
-      filename: file.name,
-      content_type: file.type,
-      size_bytes: file.size,
-      path,
-      bucket: "documents",
-    });
-
-    toast.success("Document uploaded");
+    const err = await uploadUserDocument(user.id, file);
     setUploading(false);
+    if (err) { toast.error(err); return; }
+    toast.success("Document uploaded");
     fetchDocs();
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { uploadUserDocument } from "@/lib/documents";
 import DashboardLayout from "@/components/DashboardLayout";
 import { clientNavItems } from "@/lib/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,14 +88,11 @@ function DocumentsTab() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 10 * 1024 * 1024) { toast.error("Max 10MB"); return; }
     setUploading(true);
-    const path = `${user.id}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("documents").upload(path, file);
-    if (error) { toast.error("Upload failed"); setUploading(false); return; }
-    await supabase.from("documents").insert({ owner_user_id: user.id, filename: file.name, content_type: file.type, size_bytes: file.size, path, bucket: "documents" });
-    toast.success("Document uploaded");
+    const err = await uploadUserDocument(user.id, file);
     setUploading(false);
+    if (err) { toast.error(err); return; }
+    toast.success("Document uploaded");
     fetchDocs();
   };
 
@@ -192,7 +190,8 @@ function MessagesTab() {
     })();
     const channel = supabase.channel(`messages-${activeConvo}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${activeConvo}` }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as any]);
+        const incoming = payload.new as any;
+        setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -201,9 +200,12 @@ function MessagesTab() {
   const handleSend = async () => {
     if (!newMessage.trim() || !activeConvo || !user) return;
     setSending(true);
-    const { error } = await supabase.from("messages").insert({ conversation_id: activeConvo, sender_user_id: user.id, body: newMessage.trim() });
+    const { data: sent, error } = await supabase.from("messages").insert({ conversation_id: activeConvo, sender_user_id: user.id, body: newMessage.trim() }).select("*").single();
     if (error) toast.error("Failed to send");
-    else setNewMessage("");
+    else {
+      setNewMessage("");
+      setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+    }
     setSending(false);
   };
 

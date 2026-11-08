@@ -252,6 +252,7 @@ serve(async (req) => {
           limit: 10,
           language: prefs.language,
           budget_sensitive: prefs.budgetSensitive,
+          prefer_fast_response: prefs.fastResponse,
         }),
       );
       let resultCount = 0;
