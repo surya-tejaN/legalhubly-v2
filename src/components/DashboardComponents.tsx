@@ -48,10 +48,10 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, subtitle, action }: SectionHeaderProps) {
   return (
-    <div className="flex items-start justify-between mb-8">
-      <div>
-        <h1 className="text-2xl md:text-[2rem] font-serif text-foreground tracking-tight">{title}</h1>
-        {subtitle && <p className="text-muted-foreground mt-1.5 text-[15px]">{subtitle}</p>}
+    <div className="flex items-start justify-between gap-3 flex-wrap mb-6 sm:mb-8">
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl md:text-[2rem] font-serif text-foreground tracking-tight">{title}</h1>
+        {subtitle && <p className="text-muted-foreground mt-1.5 text-sm sm:text-[15px]">{subtitle}</p>}
       </div>
       {action}
     </div>

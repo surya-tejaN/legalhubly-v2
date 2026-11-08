@@ -1,19 +1,9 @@
 import { Link } from "react-router-dom";
-import Logo from "@/components/Logo";
+import PublicPage from "@/components/PublicPage";
 
 export default function About() {
   return (
-    <main className="min-h-screen bg-background">
-      <div className="container max-w-3xl py-16 space-y-8">
-        <Link to="/" className="inline-flex">
-          <Logo withWordmark wordmarkClassName="text-xl font-bold" />
-        </Link>
-        <div>
-          <h1 className="font-serif text-3xl text-foreground">About Legalhubly</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            AI-powered legal marketplace for Chicago
-          </p>
-        </div>
+    <PublicPage title="About Legalhubly" subtitle="AI-powered legal marketplace for Chicago">
         <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
           <p>
             <strong className="text-foreground">Legalhubly</strong> helps people find the right
@@ -74,7 +64,6 @@ export default function About() {
             Home
           </Link>
         </div>
-      </div>
-    </main>
+    </PublicPage>
   );
 }

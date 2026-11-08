@@ -315,7 +315,7 @@ export default function BookConsultationDialog({ lawyer, open, onOpenChange, onB
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-sm rounded-xl bg-muted/50 px-3 py-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm rounded-xl bg-muted/50 px-3 py-2">
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <Video className="h-3.5 w-3.5" /> 30 minutes
                   </span>

@@ -122,6 +122,7 @@
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    padding-bottom: env(safe-area-inset-bottom);
   }
   h1, h2, h3 {
     font-family: 'Playfair Display', serif;
@@ -132,6 +133,20 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overscroll-behavior-x: none;
+  }
+
+  /* Phone: stop iOS zoom on focus (needs ≥16px) and leave room for Match Coach */
+  @media (max-width: 639px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+    body {
+      padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+    }
   }
 
   /* GPU-accelerate animated elements */
@@ -236,11 +251,10 @@
     box-shadow: 0 0 0 1px hsl(var(--accent) / 0.1), var(--shadow-card-hover);
   }
 
-  /* Touch-friendly tap targets */
+  /* Touch-friendly tap targets — buttons only so inline links don’t blow out layout */
   @media (pointer: coarse) {
-    button, a, [role="button"] {
+    button, [role="button"] {
       min-height: 44px;
-      min-width: 44px;
     }
   }
 

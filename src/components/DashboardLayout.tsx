@@ -30,7 +30,10 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isClientPortal = /client/i.test(portalLabel);
+
   const runSearch = () => {
+    if (!isClientPortal) return;
     const q = searchQuery.trim();
     if (!q) {
       navigate("/client/find-lawyers");
@@ -157,7 +160,7 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="md:hidden fixed inset-y-0 left-0 z-50 w-[280px] flex flex-col bg-sidebar shadow-elevated"
+              className="md:hidden fixed inset-y-0 left-0 z-50 w-[min(280px,86vw)] flex flex-col bg-sidebar shadow-elevated pt-[env(safe-area-inset-top)]"
             >
               <SidebarContent />
             </motion.aside>
@@ -168,14 +171,15 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
       {/* Main */}
       <div className={cn("flex-1 flex flex-col transition-all duration-300 ease-in-out", collapsed ? "md:ml-[72px]" : "md:ml-[260px]")}>
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 flex items-center gap-4 px-4 md:px-8 glass-nav border-b">
-          <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-9 w-9" onClick={() => setMobileOpen(true)}>
+        <header className="sticky top-0 z-30 min-h-16 flex items-center gap-3 px-3 md:px-8 glass-nav border-b pt-[env(safe-area-inset-top)]">
+          <Button variant="ghost" size="icon" className="md:hidden shrink-0 h-11 w-11" aria-label="Open menu" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
 
-          <div className="flex-1 flex items-center gap-3">
+          <div className="flex-1 flex items-center gap-3 min-w-0">
+            {isClientPortal && (
             <form
-              className="hidden sm:flex items-center gap-2.5 flex-1 max-w-lg bg-muted/60 rounded-xl px-4 py-2.5 border border-border/50 transition-colors focus-within:border-accent/30 focus-within:bg-card"
+              className="flex items-center gap-2.5 flex-1 max-w-lg bg-muted/60 rounded-xl px-3 sm:px-4 py-2.5 border border-border/50 transition-colors focus-within:border-accent/30 focus-within:bg-card"
               onSubmit={(e) => {
                 e.preventDefault();
                 runSearch();
@@ -187,17 +191,19 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search lawyers..."
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
                 aria-label="Search lawyers"
               />
               <kbd className="hidden lg:inline-flex text-[10px] text-muted-foreground/50 bg-background/80 border px-1.5 py-0.5 rounded font-mono">↵</kbd>
             </form>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={toggleDark}
-              className="h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+              className="h-11 w-11 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all shrink-0"
             >
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
@@ -205,7 +211,7 @@ export default function DashboardLayout({ children, sidebarItems, portalLabel, u
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 lg:p-10">
+        <main className="flex-1 p-4 md:p-8 lg:p-10 pb-8">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

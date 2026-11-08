@@ -429,10 +429,17 @@ export default function SupportChat() {
   const displayInput = listening && interim ? `${input}${input ? " " : ""}${interim}` : input;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-3">
+    <div
+      className={cn(
+        "fixed z-[60] flex flex-col items-end gap-3",
+        open
+          ? "inset-0 sm:inset-auto sm:bottom-4 sm:right-4"
+          : "bottom-[max(1rem,env(safe-area-inset-bottom))] right-4",
+      )}
+    >
       {open && (
-        <div className="w-[min(100vw-2rem,400px)] h-[min(72vh,560px)] rounded-2xl border border-border bg-background shadow-elevated flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
+        <div className="w-full h-full sm:w-[min(100vw-2rem,400px)] sm:h-[min(72vh,560px)] rounded-none sm:rounded-2xl border-0 sm:border border-border bg-background shadow-none sm:shadow-elevated flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <div>
               <p className="text-sm font-semibold text-foreground">Match Coach</p>
               <p className="text-[10px] text-muted-foreground">Describe → Match → Connect · Chicago</p>
@@ -640,7 +647,7 @@ export default function SupportChat() {
           )}
 
           <form
-            className="flex items-end gap-1.5 border-t border-border p-3"
+            className="flex items-end gap-1.5 border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
             onSubmit={(e) => {
               e.preventDefault();
               void send();
@@ -660,7 +667,7 @@ export default function SupportChat() {
               type="button"
               size="icon"
               variant="outline"
-              className="shrink-0 h-10 w-10"
+              className="shrink-0 h-11 w-11"
               disabled={!user || busy}
               aria-label="Upload gallery photo"
               title="Upload photo from gallery"
@@ -686,7 +693,7 @@ export default function SupportChat() {
               rows={1}
               maxLength={2000}
               className={cn(
-                "flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60",
+                "flex-1 min-w-0 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-60",
                 listening && "ring-2 ring-accent/30 border-accent/40",
               )}
               onKeyDown={(e) => {
@@ -702,7 +709,7 @@ export default function SupportChat() {
                 size="icon"
                 variant={listening ? "destructive" : "outline"}
                 className={cn(
-                  "shrink-0 h-10 w-10 relative",
+                  "shrink-0 h-11 w-11 relative",
                   listening && hearing && "animate-pulse",
                 )}
                 disabled={!user || busy}
@@ -719,7 +726,7 @@ export default function SupportChat() {
             <Button
               type="submit"
               size="icon"
-              className="shrink-0 h-10 w-10"
+              className="shrink-0 h-11 w-11"
               disabled={!user || busy || (!input.trim() && !pendingImage)}
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -731,7 +738,7 @@ export default function SupportChat() {
       <Button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="h-12 w-12 rounded-full shadow-elevated"
+        className={cn("h-14 w-14 sm:h-12 sm:w-12 rounded-full shadow-elevated", open && "hidden sm:inline-flex")}
         size="icon"
         aria-label={open ? "Close support" : "Open support chat"}
       >

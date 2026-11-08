@@ -17,6 +17,7 @@ export default function ResetPassword() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [ready, setReady] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -27,22 +28,34 @@ export default function ResetPassword() {
 
     if (isRecoveryLink) {
       setReady(true);
+      setChecking(false);
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       // Only accept the recovery event — not a normal signed-in session
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+      if (event === "PASSWORD_RECOVERY") {
+        setReady(true);
+        setChecking(false);
+      }
     });
 
     // PKCE may exchange before PASSWORD_RECOVERY; accept session only with recovery markers
     if (isRecoveryLink) {
       void supabase.auth.getSession().then(({ data }) => {
-        if (active && data.session) setReady(true);
+        if (active && data.session) {
+          setReady(true);
+          setChecking(false);
+        }
       });
     }
 
+    const timeout = window.setTimeout(() => {
+      if (active) setChecking(false);
+    }, 2000);
+
     return () => {
       active = false;
+      window.clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -67,6 +80,17 @@ export default function ResetPassword() {
     }
     setSubmitting(false);
   };
+
+  if (checking && !ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center space-y-4">
+          <Logo className="mx-auto justify-center" />
+          <p className="text-muted-foreground">Checking reset link…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!ready) {
     return (

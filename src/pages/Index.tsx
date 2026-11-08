@@ -155,7 +155,7 @@ export default function Index() {
     <div className="min-h-screen bg-background">
 
       {/* ═══ NAVIGATION ═══ */}
-      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "glass-nav border-b border-border/50 shadow-card" : "bg-transparent"}`}>
+      <nav className={`fixed top-0 inset-x-0 z-50 pt-[env(safe-area-inset-top)] transition-all duration-300 ${scrolled ? "glass-nav border-b border-border/50 shadow-card" : "bg-transparent"}`}>
         <div className="container flex items-center justify-between h-[72px]">
           <Link to="/" className="group">
             <Logo withWordmark wordmarkClassName="group-hover:opacity-90 transition-opacity" />
@@ -206,7 +206,7 @@ export default function Index() {
             )}
           </div>
 
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Button variant="ghost" size="icon" className="lg:hidden h-11 w-11" aria-label={mobileMenuOpen ? "Close menu" : "Open menu"} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
@@ -260,7 +260,7 @@ export default function Index() {
       </nav>
 
       {/* ═══ HERO ═══ */}
-      <section className="relative pt-32 pb-16 md:pt-44 md:pb-24 overflow-hidden">
+      <section className="relative pt-28 pb-12 sm:pt-32 sm:pb-16 md:pt-44 md:pb-24 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsl(42 78% 55% / 0.06), transparent)" }} />
 
         <div className="container relative">
@@ -274,11 +274,11 @@ export default function Index() {
               <Sparkles className="h-3.5 w-3.5" />
               AI-Powered Legal Matching
             </div>
-            <h1 className="text-[2.5rem] md:text-[3.75rem] font-serif leading-[1.08] tracking-tight text-foreground mb-5">
+            <h1 className="text-[1.85rem] sm:text-[2.5rem] md:text-[3.75rem] font-serif leading-[1.12] tracking-tight text-foreground mb-5">
               Legalh<span className="text-accent">u</span>bly — find the right lawyer{" "}
               <span className="text-gradient-gold">faster</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed mb-10">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed mb-8 sm:mb-10">
               Chicago’s AI legal marketplace. Describe your issue, get matched, connect with verified lawyers — free to start.
             </p>
           </motion.div>
@@ -290,8 +290,8 @@ export default function Index() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="max-w-xl mx-auto"
           >
-            <div className="bg-card rounded-2xl border shadow-elevated p-2.5">
-              <div className="flex items-center gap-2">
+            <div className="bg-card rounded-2xl border shadow-elevated p-2 sm:p-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <div className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-xl bg-background border border-border/60 focus-within:border-accent/30 focus-within:ring-2 focus-within:ring-accent/10 transition-all">
                   <Search className="h-5 w-5 text-accent shrink-0" />
                   <input
@@ -302,7 +302,6 @@ export default function Index() {
                     onKeyDown={(e) => { if (e.key === "Enter") handleSmartMatch(); }}
                     placeholder="Describe your legal issue (e.g., visa, divorce, accident...)"
                     className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/60 min-w-0"
-                    autoFocus
                   />
                   {issueInput && (
                     <button onClick={() => { setIssueInput(""); inputRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -315,11 +314,10 @@ export default function Index() {
                   variant="gold"
                   size="lg"
                   onClick={() => handleSmartMatch()}
-                  className="shrink-0 px-6 gap-2"
+                  className="w-full sm:w-auto sm:shrink-0 px-6 gap-2"
                 >
                   <Zap className="h-4 w-4" />
-                  <span className="hidden md:inline">Smart Match</span>
-                  <span className="md:hidden">Match</span>
+                  Smart Match
                 </Button>
               </div>
             </div>
@@ -334,7 +332,7 @@ export default function Index() {
       {/* ═══ TRUST BAR ═══ */}
       <section className="py-10 border-y border-border/50 bg-muted/20">
         <div className="container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
             {trustPoints.map((t, i) => (
               <motion.div key={t.label} {...fadeUp} {...staggerChild(i)} className="flex items-center gap-3 justify-center md:justify-start">
                 <div className="h-10 w-10 rounded-xl bg-accent/8 flex items-center justify-center shrink-0">
@@ -351,11 +349,11 @@ export default function Index() {
       </section>
 
       {/* ═══ PRACTICE AREAS BROWSE ═══ */}
-      <section id="practice-areas" className="py-24 md:py-32">
+      <section id="practice-areas" className="py-16 sm:py-24 md:py-32">
         <div className="container">
-          <motion.div {...fadeUp} className="text-center mb-16 max-w-lg mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-8 sm:mb-16 max-w-lg mx-auto">
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-3 block">Practice Areas</span>
-            <h2 className="text-3xl md:text-[2.75rem] font-serif text-foreground leading-tight mb-4">Browse by legal category</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-[2.75rem] font-serif text-foreground leading-tight mb-4">Browse by legal category</h2>
             <p className="text-muted-foreground text-lg">Select a practice area to find specialized Chicago attorneys ({LAUNCH_CITY_LABEL}).</p>
           </motion.div>
 
@@ -364,7 +362,7 @@ export default function Index() {
               <motion.div key={cat.label} {...fadeUp} {...staggerChild(i)}>
                 <Link
                   to={`/client/find-lawyers?matched=${encodeURIComponent(cat.practice)}`}
-                  className="group flex items-center gap-4 p-6 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover hover:border-accent/20 transition-all duration-300"
+                  className="group flex items-center gap-4 p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover hover:border-accent/20 transition-all duration-300"
                 >
                   <div className="h-12 w-12 rounded-xl bg-accent/8 flex items-center justify-center shrink-0 group-hover:bg-accent/12 group-hover:scale-105 transition-all duration-300">
                     <cat.icon className="h-6 w-6 text-accent" />
@@ -382,11 +380,11 @@ export default function Index() {
       </section>
 
       {/* ═══ HOW IT WORKS ═══ */}
-      <section id="how" className="py-24 md:py-32 bg-muted/20">
+      <section id="how" className="py-16 sm:py-24 md:py-32 bg-muted/20">
         <div className="container">
-          <motion.div {...fadeUp} className="text-center mb-16 max-w-lg mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-8 sm:mb-16 max-w-lg mx-auto">
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-3 block">How It Works</span>
-            <h2 className="text-3xl md:text-[2.75rem] font-serif text-foreground leading-tight mb-4">Three steps to the right lawyer</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-[2.75rem] font-serif text-foreground leading-tight mb-4">Three steps to the right lawyer</h2>
             <p className="text-muted-foreground text-lg">Simple, fast, and completely free to start.</p>
           </motion.div>
 
@@ -397,7 +395,7 @@ export default function Index() {
               { step: "03", icon: Sparkles, title: "Connect with your lawyer", desc: "View profiles, compare ratings, and visit their website to get started." },
             ].map((s, i) => (
               <motion.div key={s.step} {...fadeUp} {...staggerChild(i)}
-                className="relative text-center p-10 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover transition-all duration-300"
+                className="relative text-center p-6 sm:p-10 rounded-2xl bg-card border border-border/60 shadow-card hover:shadow-card-hover transition-all duration-300"
               >
                 <span className="absolute top-5 right-6 text-[3rem] font-serif text-accent/8 leading-none">{s.step}</span>
                 <div className="h-16 w-16 rounded-2xl bg-accent/8 flex items-center justify-center mx-auto mb-6">
@@ -412,25 +410,25 @@ export default function Index() {
       </section>
 
       {/* ═══ CTA ═══ */}
-      <section className="py-24 md:py-32">
+      <section className="py-16 sm:py-24 md:py-32">
         <div className="container">
-          <div className="max-w-4xl mx-auto text-center p-12 md:p-20 rounded-3xl hero-gradient relative overflow-hidden">
+          <div className="max-w-4xl mx-auto text-center p-8 sm:p-12 md:p-20 rounded-3xl hero-gradient relative overflow-hidden">
             <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle at 25% 40%, hsl(42 78% 55%), transparent 50%), radial-gradient(circle at 75% 70%, hsl(42 78% 55%), transparent 40%)" }} />
             <div className="relative">
-              <h2 className="text-3xl md:text-[2.75rem] font-serif text-primary-foreground leading-tight mb-5">
+              <h2 className="text-2xl sm:text-3xl md:text-[2.75rem] font-serif text-primary-foreground leading-tight mb-5">
                 Ready to find your lawyer?
               </h2>
-              <p className="text-primary-foreground/60 text-lg mb-10 max-w-md mx-auto">
+              <p className="text-primary-foreground/60 text-base sm:text-lg mb-8 sm:mb-10 max-w-md mx-auto">
                 It's free to search and get matched. Find your attorney in minutes.
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button variant="gold" size="lg" onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => inputRef.current?.focus(), 500); }}>
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3">
+                <Button variant="gold" size="lg" className="w-full sm:w-auto" onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => inputRef.current?.focus(), 500); }}>
                   Get Started Free <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+                  className="w-full sm:w-auto bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
                   onClick={async () => {
                     const result = await shareLegalhubly({
                       text: "Find the right Chicago lawyer faster on Legalhubly — free to start.",
@@ -449,7 +447,7 @@ export default function Index() {
       </section>
 
       {/* ═══ FOOTER ═══ */}
-      <footer className="border-t bg-card/30 pt-16 pb-8">
+      <footer className="border-t bg-card/30 pt-12 sm:pt-16 pb-8">
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">

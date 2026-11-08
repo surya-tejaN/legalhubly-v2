@@ -168,8 +168,8 @@ function LawyerCard({
             </div>
           </div>
 
-          {/* CTAs — website first, book below */}
-          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
+          {/* CTAs — stacked on phone so buttons don’t overflow */}
+          <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto shrink-0">
             <Button
               type="button"
               variant="gold"
@@ -209,7 +209,7 @@ function LawyerCard({
                   : "Preview book"
                 : "Unavailable"}
             </Button>
-            <Button variant="ghost" size="sm" asChild className="text-xs">
+            <Button variant="ghost" size="sm" asChild className="text-xs w-full sm:w-auto">
               <Link to={`/client/lawyer/${lawyer.id}`}>Profile</Link>
             </Button>
           </div>
@@ -280,6 +280,7 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
 
   // Fetch Chicago lawyers - filter by matched practice areas if provided
   useEffect(() => {
+    let active = true;
     setLoading(true);
     (async () => {
       let query = supabase.from("lawyers").select("*").eq("city", "Chicago");
@@ -289,6 +290,7 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
       }
 
       const { data, error } = await query.order("rating", { ascending: false });
+      if (!active) return;
       if (error) {
         toast.error("Could not load lawyers. Please try again.");
         setLawyers([]);
@@ -329,9 +331,13 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
         });
       }
 
+      if (!active) return;
       setLawyers(results);
       setLoading(false);
     })();
+    return () => {
+      active = false;
+    };
   }, [urlMatched, urlQuery]);
 
   // Local search filter
@@ -400,10 +406,10 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
         }}
       />
       {/* Header */}
-      <header className="sticky top-0 z-40 glass-nav border-b border-border/50">
+      <header className="sticky top-0 z-40 glass-nav border-b border-border/50 pt-[env(safe-area-inset-top)]">
         <div className="container flex items-center gap-3 h-16">
-          <Button variant="ghost" size="icon" asChild className="shrink-0">
-            <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
+          <Button variant="ghost" size="icon" asChild className="shrink-0 h-11 w-11">
+            <Link to="/" aria-label="Back to home"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
           <Link to="/" className="hidden sm:inline-flex">
             <Logo withWordmark wordmarkClassName="text-base" />
@@ -419,7 +425,7 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
         </div>
       </header>
 
-      <div className="container py-8 md:py-12">
+      <div className="container py-5 md:py-12">
         {/* Title + Search */}
         <div className="mb-8">
           <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
@@ -445,13 +451,13 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Filter by name, firm, or specialty..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+              className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
             />
           </div>
         </div>
 
         {/* Sort */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-6">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 mb-6 -mx-1 px-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
           <span className="text-xs text-muted-foreground font-medium shrink-0 flex items-center gap-1.5">
             <ArrowUpDown className="h-3.5 w-3.5" /> Sort:
           </span>
@@ -461,7 +467,7 @@ export default function FindLawyers({ seoPracticeArea }: FindLawyersProps = {}) 
               <button
                 key={opt.value}
                 onClick={() => setSortBy(opt.value)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-2.5 min-h-11 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   sortBy === opt.value
                     ? "bg-accent text-accent-foreground shadow-sm"
                     : "bg-card border border-border/60 text-muted-foreground hover:text-foreground hover:border-accent/20"

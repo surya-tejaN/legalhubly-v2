@@ -168,9 +168,9 @@ export default function LawyerProfile() {
         onOpenChange={setBookOpen}
       />
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 glass-nav border-b">
+      <nav className="sticky top-0 z-50 glass-nav border-b pt-[env(safe-area-inset-top)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 min-h-11 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
           <Link to="/" className="font-serif text-lg text-foreground">Legalhubly</Link>
@@ -186,8 +186,8 @@ export default function LawyerProfile() {
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl md:text-3xl font-serif">{lawyer.name}</h1>
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-serif break-words">{lawyer.name}</h1>
                 {lawyer.verified && (
                   <Badge className="bg-accent/20 text-accent border-accent/30 gap-1">
                     <Shield className="h-3 w-3" /> Verified
@@ -205,12 +205,12 @@ export default function LawyerProfile() {
                 <span className="flex items-center gap-1.5"><Timer className="h-3.5 w-3.5" /> Responds in {responseLabel}</span>
               </div>
 
-              <div className="flex flex-wrap gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mt-6">
                 <Button
                   type="button"
                   variant="gold"
                   size="lg"
-                  className="gap-2"
+                  className="gap-2 w-full sm:w-auto"
                   onClick={() =>
                     openLawyerWebsite({
                       websiteUrl: lawyer.website_url,
@@ -225,7 +225,7 @@ export default function LawyerProfile() {
                   <Button
                     type="button"
                     size="lg"
-                    className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
+                    className="gap-2 w-full sm:w-auto bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
                     onClick={() => setBookOpen(true)}
                     title={
                       isFeatureEnabled("clientBooking")
@@ -241,7 +241,7 @@ export default function LawyerProfile() {
                   <Button
                     type="button"
                     size="lg"
-                    className="gap-2 bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
+                    className="gap-2 w-full sm:w-auto bg-white text-primary hover:bg-white/90 border border-white shadow-sm"
                     onClick={() => void handleMessage()}
                     disabled={messaging}
                   >
@@ -254,7 +254,7 @@ export default function LawyerProfile() {
                   size="lg"
                   onClick={handleSave}
                   className={cn(
-                    "gap-2 border shadow-sm",
+                    "gap-2 w-full sm:w-auto border shadow-sm",
                     saved
                       ? "bg-accent/20 text-accent border-accent/50 hover:bg-accent/30"
                       : "bg-white text-primary hover:bg-white/90 border-white",

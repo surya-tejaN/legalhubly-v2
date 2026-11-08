@@ -115,7 +115,7 @@ export default function ClientDashboard() {
                     const lawyer = sl.lawyers;
                     if (!lawyer) return null;
                     return (
-                      <div key={sl.id} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                      <div key={sl.id} className="flex items-center gap-3 sm:gap-4 p-4 hover:bg-muted/30 transition-colors">
                         <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <span className="text-sm font-bold text-primary">{lawyer.avatar_initials}</span>
                         </div>
@@ -135,7 +135,7 @@ export default function ClientDashboard() {
                             <span className="text-xs text-muted-foreground">· {lawyer.practice_areas?.slice(0, 2).join(", ")}</span>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="outline" size="sm" asChild className="shrink-0">
                           <Link to={`/client/lawyer/${lawyer.id}`}>View</Link>
                         </Button>
                       </div>

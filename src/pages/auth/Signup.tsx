@@ -339,7 +339,7 @@ export default function Signup() {
                     <InputOTPSlot
                       key={i}
                       index={i}
-                      className="h-12 w-11 text-xl font-semibold rounded-md border border-input first:rounded-md last:rounded-md"
+                      className="h-11 w-9 sm:h-12 sm:w-11 text-lg sm:text-xl font-semibold rounded-md border border-input first:rounded-md last:rounded-md"
                     />
                   ))}
                 </InputOTPGroup>

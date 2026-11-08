@@ -106,7 +106,7 @@ export default function SavedLawyers() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="flex items-center gap-4 p-5 rounded-xl border bg-card hover:shadow-sm transition-shadow"
+                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-xl border bg-card hover:shadow-sm transition-shadow"
               >
                 <Link to={`/client/lawyer/${lawyer.id}`} className="shrink-0">
                   <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center">
@@ -129,7 +129,7 @@ export default function SavedLawyers() {
                     <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{lawyer.experience_years} yrs</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto">
                   {lawyer.practice_areas?.[0] && (
                     <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">{lawyer.practice_areas[0]}</Badge>
                   )}

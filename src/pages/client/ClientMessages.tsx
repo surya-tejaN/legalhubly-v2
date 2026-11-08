@@ -10,6 +10,8 @@ import { SectionHeader } from "@/components/DashboardComponents";
 import { MessageSquare, Send, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { isMdUp } from "@/lib/media";
+import { cn } from "@/lib/utils";
 
 interface Conversation {
   id: string;
@@ -53,7 +55,7 @@ export default function ClientMessages() {
         setConversations(convos || []);
         if (requestedConvo && ids.includes(requestedConvo)) {
           setActiveConvo(requestedConvo);
-        } else if (convos && convos.length > 0) {
+        } else if (convos && convos.length > 0 && isMdUp()) {
           setActiveConvo(convos[0].id);
         }
       }
@@ -119,9 +121,9 @@ export default function ClientMessages() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100dvh-12rem)] md:h-[600px]">
           {/* Conversation list */}
-          <div className="rounded-xl border bg-card overflow-y-auto">
+          <div className={cn("rounded-xl border bg-card overflow-y-auto", activeConvo && "hidden md:block")}>
             {conversations.map((c) => (
               <button
                 key={c.id}
@@ -142,7 +144,14 @@ export default function ClientMessages() {
           </div>
 
           {/* Messages */}
-          <div className="md:col-span-2 rounded-xl border bg-card flex flex-col">
+          <div className={cn("md:col-span-2 rounded-xl border bg-card flex flex-col", !activeConvo && "hidden md:flex")}>
+            <button
+              type="button"
+              className="md:hidden flex items-center gap-2 px-3 py-2.5 border-b text-sm font-medium text-foreground"
+              onClick={() => setActiveConvo(null)}
+            >
+              ← Conversations
+            </button>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((msg) => (
                 <motion.div
@@ -151,7 +160,7 @@ export default function ClientMessages() {
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex ${msg.sender_user_id === user?.id ? "justify-end" : "justify-start"}`}
                 >
-                  <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
+                  <div className={`max-w-[85%] break-words whitespace-pre-wrap px-4 py-2.5 rounded-2xl text-sm ${
                     msg.sender_user_id === user?.id
                       ? "bg-accent text-accent-foreground rounded-br-md"
                       : "bg-muted text-foreground rounded-bl-md"
@@ -172,9 +181,10 @@ export default function ClientMessages() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type a message..."
+                className="min-w-0"
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               />
-              <Button onClick={handleSend} disabled={sending || !newMessage.trim()} size="icon">
+              <Button onClick={handleSend} disabled={sending || !newMessage.trim()} size="icon" className="h-11 w-11 shrink-0">
                 <Send className="h-4 w-4" />
               </Button>
             </div>

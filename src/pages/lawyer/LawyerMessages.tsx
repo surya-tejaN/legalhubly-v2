@@ -9,6 +9,8 @@ import { SectionHeader } from "@/components/DashboardComponents";
 import { MessageSquare, Send, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { isMdUp } from "@/lib/media";
+import { cn } from "@/lib/utils";
 
 interface Conversation { id: string; created_at: string; updated_at: string; }
 interface Message { id: string; body: string; sender_user_id: string; created_at: string; }
@@ -31,7 +33,7 @@ export default function LawyerMessages() {
         const ids = parts.map((p: any) => p.conversation_id);
         const { data: convos } = await supabase.from("conversations").select("*").in("id", ids).order("updated_at", { ascending: false });
         setConversations(convos || []);
-        if (convos && convos.length > 0) setActiveConvo(convos[0].id);
+        if (convos && convos.length > 0 && isMdUp()) setActiveConvo(convos[0].id);
       }
       setLoading(false);
     })();
@@ -77,8 +79,8 @@ export default function LawyerMessages() {
           <p className="text-sm text-muted-foreground">Client conversations will appear here.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
-          <div className="rounded-xl border bg-card overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100dvh-12rem)] md:h-[600px]">
+          <div className={cn("rounded-xl border bg-card overflow-y-auto", activeConvo && "hidden md:block")}>
             {conversations.map((c) => (
               <button key={c.id} onClick={() => setActiveConvo(c.id)}
                 className={`w-full p-4 text-left border-b hover:bg-muted/50 transition-colors ${activeConvo === c.id ? "bg-accent/5 border-l-2 border-l-accent" : ""}`}>
@@ -90,12 +92,13 @@ export default function LawyerMessages() {
               </button>
             ))}
           </div>
-          <div className="md:col-span-2 rounded-xl border bg-card flex flex-col">
+          <div className={cn("md:col-span-2 rounded-xl border bg-card flex flex-col", !activeConvo && "hidden md:flex")}>
+            <button type="button" className="md:hidden flex items-center gap-2 px-3 py-2.5 border-b text-sm font-medium" onClick={() => setActiveConvo(null)}>← Conversations</button>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((msg) => (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
                   className={`flex ${msg.sender_user_id === user?.id ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${msg.sender_user_id === user?.id ? "bg-accent text-accent-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md"}`}>
+                  <div className={`max-w-[85%] break-words whitespace-pre-wrap px-4 py-2.5 rounded-2xl text-sm ${msg.sender_user_id === user?.id ? "bg-accent text-accent-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md"}`}>
                     {msg.body}
                   </div>
                 </motion.div>
@@ -104,8 +107,9 @@ export default function LawyerMessages() {
             </div>
             <div className="p-3 border-t flex gap-2">
               <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..."
+                className="min-w-0"
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()} />
-              <Button onClick={handleSend} disabled={sending || !newMessage.trim()} size="icon"><Send className="h-4 w-4" /></Button>
+              <Button onClick={handleSend} disabled={sending || !newMessage.trim()} size="icon" className="h-11 w-11 shrink-0"><Send className="h-4 w-4" /></Button>
             </div>
           </div>
         </div>
